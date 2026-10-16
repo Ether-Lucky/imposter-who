@@ -247,6 +247,16 @@ One Socket.IO namespace. The handshake `auth` decides the role:
 - **Windows firewall:** the first run triggers the "allow Node.js on private networks" prompt. The host display shows a "Phones can't connect?" help card that walks through it, plus a self-test (the host page fetches its own LAN URL to confirm it is reachable).
 - **No HTTPS:** keeps setup to zero. This means no Wake Lock on phones, so the reconnect flow (RECON-1) carries the experience when screens sleep. iOS Safari has no Vibration API; haptics are skipped silently there.
 
+### 7.1 Public mode (`npm run public`, REQ-CONN-6)
+
+`scripts/public.mjs` builds the client, starts the server with `--public` on `127.0.0.1:3000`, runs `cloudflared tunnel --url http://127.0.0.1:3000`, reads the `https://*.trycloudflare.com` address from its output, then prints and opens `<address>/host?key=<HOST_KEY>`.
+
+- Every request arrives through `cloudflared` from loopback, so public mode turns off loopback trust. `GET /api/host-session` needs `?key=` instead; host sockets and host REST need only the host token.
+- `HOST_KEY` comes from the environment (at least 12 characters) or is random per run.
+- `/api/join-info?origin=` builds the join link and QR from the board's own public origin.
+- HTTPS comes free with the tunnel, so phones get a secure context.
+- The quick-tunnel address changes every run, and the tunnel has no uptime guarantee. That suits test runs; a fixed address would need a named tunnel on a Cloudflare account.
+
 ## 8. Security and secrecy model
 
 - **In scope:** someone glancing at another phone or the board, a player opening dev tools on their own phone, a phone opening `/host`.

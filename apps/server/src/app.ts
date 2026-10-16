@@ -18,6 +18,11 @@ export interface AppOptions {
   clientDist?: string;
   /** Override for tests. */
   lan?: () => LanAddress[];
+  /**
+   * Public mode (internet tunnel). Every request arrives through the tunnel from loopback,
+   * so loopback proves nothing: the host proves itself with this key instead.
+   */
+  hostKey?: string;
 }
 
 const refuse = (res: Response, status: number, code: ErrorCode) =>
@@ -28,14 +33,19 @@ export function createApp(opts: AppOptions) {
   app.disable('x-powered-by');
   const lan = opts.lan ?? (() => lanAddresses());
 
+  const publicMode = !!opts.hostKey;
+
   const fromLaptop = (req: Request) =>
     isLoopback(
       clientAddress(req.socket.remoteAddress, req.headers['x-forwarded-for'], opts.trustProxy),
     );
 
-  /** REQ-CONN-3: host-only routes need the laptop and the per-boot token. */
+  /** Where host requests may come from: the laptop on a LAN, anywhere in public mode. */
+  const hostPlace = (req: Request) => publicMode || fromLaptop(req);
+
+  /** REQ-CONN-3: host-only routes need the right place and the per-boot token. */
   const requireHost = (req: Request, res: Response, next: NextFunction) => {
-    if (!fromLaptop(req) || !tokensEqual(req.get('x-host-token'), opts.hostToken)) {
+    if (!hostPlace(req) || !tokensEqual(req.get('x-host-token'), opts.hostToken)) {
       return refuse(res, 403, 'NOT_HOST');
     }
     next();
@@ -47,14 +57,44 @@ export function createApp(opts: AppOptions) {
     res.json({ ok: true });
   });
 
-  /** The host display fetches its token here. Only the laptop itself gets one. */
+  /**
+   * The host display fetches its token here. On a LAN only the laptop itself gets one;
+   * in public mode only a request carrying the host key does.
+   */
   app.get('/api/host-session', (req, res) => {
-    if (!fromLaptop(req)) return refuse(res, 403, 'NOT_HOST');
-    res.set('Cache-Control', 'no-store').json({ ok: true, hostToken: opts.hostToken });
+    const allowed = publicMode ? tokensEqual(req.query.key, opts.hostKey!) : fromLaptop(req);
+    if (!allowed) return refuse(res, 403, 'NOT_HOST');
+    res
+      .set('Cache-Control', 'no-store')
+      .json({ ok: true, hostToken: opts.hostToken, mode: publicMode ? 'public' : 'lan' });
   });
+
+  const qr = (url: string) =>
+    QRCode.toString(url, {
+      type: 'svg',
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#16181b', light: '#f2f2ee' },
+    });
 
   /** REQ-CONN-1/2: LAN addresses and a QR code for the join link. */
   app.get('/api/join-info', requireHost, async (req, res) => {
+    if (publicMode) {
+      // Phones join through the same public address the board was opened on.
+      const origin = URL.canParse(String(req.query.origin ?? ''))
+        ? new URL(String(req.query.origin))
+        : null;
+      if (!origin || !/^https?:$/.test(origin.protocol)) return refuse(res, 400, 'BAD_REQUEST');
+      const url = `${origin.origin}/play`;
+      return res.json({
+        ok: true,
+        mode: 'public',
+        addresses: [],
+        preferred: null,
+        url,
+        qrSvg: await qr(url),
+      });
+    }
     const addresses = lan();
     const wanted = String(req.query.address ?? '');
     const preferred = addresses.find((a) => a.address === wanted) ?? addresses[0] ?? null;
@@ -62,15 +102,8 @@ export function createApp(opts: AppOptions) {
     const port =
       Number.isInteger(queryPort) && queryPort > 0 && queryPort < 65536 ? queryPort : opts.port();
     const url = preferred ? `http://${preferred.address}:${port}/play` : null;
-    const qrSvg = url
-      ? await QRCode.toString(url, {
-          type: 'svg',
-          margin: 1,
-          errorCorrectionLevel: 'M',
-          color: { dark: '#16181b', light: '#f2f2ee' },
-        })
-      : null;
-    res.json({ ok: true, addresses, preferred, url, qrSvg });
+    const qrSvg = url ? await qr(url) : null;
+    res.json({ ok: true, mode: 'lan', addresses, preferred, url, qrSvg });
   });
 
   const categoriesBody = () => ({
@@ -99,7 +132,7 @@ export function createApp(opts: AppOptions) {
 
   const dist = opts.clientDist;
   if (dist && existsSync(join(dist, 'host.html'))) {
-    app.get('/', (req, res) => res.redirect(fromLaptop(req) ? '/host' : '/play'));
+    app.get('/', (req, res) => res.redirect(!publicMode && fromLaptop(req) ? '/host' : '/play'));
     app.get('/host', (_req, res) => res.sendFile(join(dist, 'host.html')));
     app.get('/play', (_req, res) => res.sendFile(join(dist, 'play.html')));
     app.use(express.static(dist, { index: false }));

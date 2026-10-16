@@ -365,3 +365,73 @@ describe('integration: HTTP', () => {
     expect(root.headers.get('location')).toBe('/host');
   });
 });
+
+describe('integration: public mode over a tunnel', () => {
+  const KEY = 'test-host-key-123456';
+
+  it('does not trust loopback: the host key is required for a host session', async () => {
+    h = await startHarness({ hostKey: KEY });
+    // Tunnel traffic arrives from 127.0.0.1, exactly like this request.
+    expect((await fetch(`${h.url}/api/host-session`)).status).toBe(403);
+    expect((await fetch(`${h.url}/api/host-session?key=wrong-key-000000`)).status).toBe(403);
+    const ok = await fetch(`${h.url}/api/host-session?key=${KEY}`);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ hostToken: h.server.hostToken, mode: 'public' });
+  });
+
+  it('host sockets need the token, not a loopback address', async () => {
+    h = await startHarness({ hostKey: KEY, trustProxy: true });
+    const { Client } = await import('./harness.ts');
+    await expect(Client.connect(h.url, { kind: 'host', hostToken: 'nope' })).rejects.toThrow(
+      'NOT_HOST',
+    );
+    // A host somewhere else on the internet still connects with the real token.
+    const host = await Client.connect(
+      h.url,
+      { kind: 'host', hostToken: h.server.hostToken },
+      { 'x-forwarded-for': '203.0.113.9' },
+    );
+    expect(host.socket.connected).toBe(true);
+  });
+
+  it('builds the join link and QR from the public origin', async () => {
+    h = await startHarness({ hostKey: KEY });
+    const headers = { 'x-host-token': h.server.hostToken };
+    const origin = encodeURIComponent('https://example-words.trycloudflare.com');
+    const res = await fetch(`${h.url}/api/join-info?origin=${origin}`, { headers });
+    const body = (await res.json()) as { mode: string; url: string; qrSvg: string };
+    expect(body).toMatchObject({
+      mode: 'public',
+      url: 'https://example-words.trycloudflare.com/play',
+    });
+    expect(body.qrSvg).toContain('<svg');
+    const bad = await fetch(`${h.url}/api/join-info?origin=javascript:alert(1)`, { headers });
+    expect(bad.status).toBe(400);
+  });
+
+  it('plays a round end to end in public mode', async () => {
+    h = await startHarness({ hostKey: KEY });
+    const res = await fetch(`${h.url}/api/host-session?key=${KEY}`);
+    const { hostToken } = (await res.json()) as { hostToken: string };
+    const { Client } = await import('./harness.ts');
+    const host = await Client.connect<HostView>(h.url, { kind: 'host', hostToken });
+    const phones: Phone[] = [];
+    for (let i = 0; i < 3; i++) {
+      const p = await h.phone();
+      await p.ok('player:join', { name: `Net${i}` });
+      phones.push(p);
+    }
+    await host.waitFor((v) => v.players.length === 3);
+    await host.ok('round:start');
+    await host.waitFor((v) => v.phase === 'reveal');
+  });
+
+  it('sends the site root to the phone page', async () => {
+    const dist = mkdtempSync(join(tmpdir(), 'iw-dist-'));
+    writeFileSync(join(dist, 'host.html'), 'h');
+    writeFileSync(join(dist, 'play.html'), 'p');
+    h = await startHarness({ hostKey: KEY, clientDist: dist });
+    const root = await fetch(`${h.url}/`, { redirect: 'manual' });
+    expect(root.headers.get('location')).toBe('/play');
+  });
+});

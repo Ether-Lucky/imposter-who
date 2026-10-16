@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { HostView } from '@imposter-who/core';
 import { createConnection, type Connection } from '../net/connection.ts';
-import { startHostSession } from './api.ts';
+import { startHostSession, takeHostKey } from './api.ts';
 import { HostScreen } from './HostScreen.tsx';
 
 let connection: Connection<HostView> | null = null;
@@ -13,7 +13,8 @@ function NotTheLaptop() {
       <div className="grid max-w-md gap-4">
         <h1 className="text-3xl font-black uppercase">This is the board</h1>
         <p className="text-ink-dim">
-          The board only runs on the laptop hosting the game. On a phone, check in here instead:
+          The board only runs on the laptop hosting the game, opened with its host link. On a phone,
+          check in here instead:
         </p>
         <a href="/play" className="text-2xl font-bold text-amber underline underline-offset-4">
           Open your ticket
@@ -49,8 +50,9 @@ export function HostApp() {
   useEffect(() => {
     if (connection) return;
     let retry: ReturnType<typeof setTimeout>;
+    const key = takeHostKey();
     const attempt = () =>
-      startHostSession().then(
+      startHostSession(key).then(
         (token) => {
           if (!token) return setState('refused');
           connection ??= createConnection<HostView>({ kind: 'host', hostToken: token });

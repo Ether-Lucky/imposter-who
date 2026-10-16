@@ -31,34 +31,44 @@ export function JoinCard({
         dangerouslySetInnerHTML={{ __html: info.qrSvg ?? '' }}
       />
       <p className="font-mono text-lg break-all">{info.url}</p>
-      {info.addresses.length > 1 && (
-        <label className="grid gap-1 text-sm">
-          <span className="tracking-widest text-ink-dim uppercase">Network</span>
-          <select
-            value={info.preferred?.address}
-            onChange={(e) => onAddress(e.target.value)}
-            className="min-h-10 rounded-md bg-flap px-2"
-          >
-            {info.addresses.map((a) => (
-              <option key={a.address} value={a.address}>
-                {a.name}: {a.address}
-              </option>
-            ))}
-          </select>
-        </label>
+      {info.mode === 'public' ? (
+        <p className="text-sm text-ink-dim">
+          Online game: anyone with this link can check in, from any network.
+        </p>
+      ) : (
+        <>
+          {info.addresses.length > 1 && (
+            <label className="grid gap-1 text-sm">
+              <span className="tracking-widest text-ink-dim uppercase">Network</span>
+              <select
+                value={info.preferred?.address}
+                onChange={(e) => onAddress(e.target.value)}
+                className="min-h-10 rounded-md bg-flap px-2"
+              >
+                {info.addresses.map((a) => (
+                  <option key={a.address} value={a.address}>
+                    {a.name}: {a.address}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <details className="text-sm text-ink-dim">
+            <summary className="cursor-pointer">Phones can't connect?</summary>
+            <ol className="mt-2 grid list-decimal gap-1 pl-5">
+              <li>Phones must be on the same Wi-Fi as this laptop, not mobile data.</li>
+              <li>
+                On Windows, allow Node.js on private networks when the firewall asks (or in Windows
+                Security, Firewall, Allow an app).
+              </li>
+              <li>
+                Guest Wi-Fi often blocks devices from seeing each other. Use the main network.
+              </li>
+              <li>If the laptop has several networks, pick the Wi-Fi one above.</li>
+            </ol>
+          </details>
+        </>
       )}
-      <details className="text-sm text-ink-dim">
-        <summary className="cursor-pointer">Phones can't connect?</summary>
-        <ol className="mt-2 grid list-decimal gap-1 pl-5">
-          <li>Phones must be on the same Wi-Fi as this laptop, not mobile data.</li>
-          <li>
-            On Windows, allow Node.js on private networks when the firewall asks (or in Windows
-            Security, Firewall, Allow an app).
-          </li>
-          <li>Guest Wi-Fi often blocks devices from seeing each other. Use the main network.</li>
-          <li>If the laptop has several networks, pick the Wi-Fi one above.</li>
-        </ol>
-      </details>
     </div>
   );
 }

@@ -42,6 +42,11 @@ Product context lives in [PRODUCT.md](../PRODUCT.md). This file lists numbered, 
 **REQ-CONN-5 (MUST) Late joiners.**
 - WHEN someone joins while a round is in progress, THE SYSTEM SHALL seat them as *standby*. They see a "next departure" ticket and join at the next round.
 
+**REQ-CONN-6 (SHOULD) Play over the internet.** `npm run public` SHALL serve the game through a Cloudflare quick tunnel so phones can join from any network.
+- WHEN running in public mode, THE SYSTEM SHALL NOT treat loopback requests as the host (tunnel traffic arrives from loopback). The host proves itself with a per-run host key in the board link (`/host?key=…`).
+- WHEN the board is opened with the key, THE SYSTEM SHALL remove the key from the address bar and show a QR code for the public `/play` address.
+- The server listens on `127.0.0.1` only in public mode.
+
 ## 2. Lobby and settings (LOBBY)
 
 **REQ-LOBBY-1 (MUST) Live roster.** WHEN players join, leave or reconnect, THE SYSTEM SHALL update the host display and every controller within 250 ms on a normal home Wi-Fi.
@@ -219,3 +224,4 @@ The full spec is [04-ui-motion.md](04-ui-motion.md). Requirements here are the o
 | D10 | Scoring values (RES-4) | Decided |
 | D11 | Single game per server (no room codes) | Decided |
 | D12 | Multiple imposters / team modes | Later |
+| D13 | Remote test runs use a Cloudflare quick tunnel (laptop stays the server). Vercel ruled out: serverless functions cannot hold the Socket.IO connections or in-memory game state | Decided |

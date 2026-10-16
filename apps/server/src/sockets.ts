@@ -29,6 +29,8 @@ export interface SocketOptions {
   graceMs?: number;
   /** Max intents per second per socket (02-design §8). */
   ratePerSecond?: number;
+  /** Public mode: tunnel traffic is all loopback, so the host token alone authorises. */
+  publicMode?: boolean;
 }
 
 interface SocketData {
@@ -195,7 +197,8 @@ export function attachSockets(io: Server, game: GameHost, opts: SocketOptions) {
     const base = { bucket: { tokens: rate, at: Date.now() } };
     if (auth.kind === 'host') {
       // REQ-CONN-3: host commands only from the laptop itself, with the per-boot token.
-      if (!isLoopback(address) || !tokensEqual(auth.hostToken, opts.hostToken)) {
+      const place = opts.publicMode || isLoopback(address);
+      if (!place || !tokensEqual(auth.hostToken, opts.hostToken)) {
         return next(new Error('NOT_HOST'));
       }
       socket.data = { ...base, kind: 'host' } satisfies SocketData;

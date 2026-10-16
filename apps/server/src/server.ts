@@ -19,6 +19,8 @@ export interface GameServerOptions {
   ratePerSecond?: number;
   rng?: Rng;
   lan?: () => LanAddress[];
+  /** Public mode over an internet tunnel: the host opens /host?key=<hostKey>. */
+  hostKey?: string;
 }
 
 export function createGameServer(opts: GameServerOptions) {
@@ -41,6 +43,7 @@ export function createGameServer(opts: GameServerOptions) {
     port,
     clientDist: opts.clientDist,
     lan: opts.lan,
+    hostKey: opts.hostKey,
   });
   httpServer.on('request', app);
 
@@ -50,6 +53,7 @@ export function createGameServer(opts: GameServerOptions) {
     trustProxy,
     graceMs: opts.graceMs,
     ratePerSecond: opts.ratePerSecond,
+    publicMode: !!opts.hostKey,
   });
 
   return {
