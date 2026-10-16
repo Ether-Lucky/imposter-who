@@ -1,0 +1,12 @@
+{
+  "id": "hobbies",
+  "name": "Hobbies",
+  "words": [
+    "painting", "knitting", "gardening", "fishing", "camping", "hiking", "cooking", "baking",
+    "dancing", "singing", "karaoke", "photography", "reading", "writing", "gaming", "puzzles",
+    "origami", "pottery", "sewing", "drawing", "magic tricks", "juggling", "bird watching", "stamp collecting",
+    "board games", "card games", "skating", "travelling", "scrapbooking", "woodworking", "calligraphy", "astronomy",
+    "chess", "guitar", "piano", "drums", "meditation", "podcasting", "vlogging", "crossword",
+    "lego", "jigsaw", "kite flying", "bowling"
+  ]
+}

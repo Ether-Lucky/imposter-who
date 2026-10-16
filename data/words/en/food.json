@@ -1,0 +1,12 @@
+{
+  "id": "food",
+  "name": "Food",
+  "words": [
+    "banana", "pizza", "sushi", "pancake", ["doughnut", "donut"], "spaghetti", "burger", "taco",
+    "croissant", "popcorn", "watermelon", "pineapple", "avocado", "chocolate", "cheese", "omelette",
+    "dumpling", "lasagna", "burrito", "pretzel", "waffle", "cupcake", ["ice cream", "icecream"], "noodles",
+    "mango", "strawberry", "coconut", "garlic", "onion", "mushroom", "broccoli", "carrot",
+    "sandwich", "salad", "bacon", "honey", "peanut butter", "fried rice", "hot dog", "steak",
+    "lemon", "grapes", "corn", "soup"
+  ]
+}

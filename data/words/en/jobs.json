@@ -1,0 +1,12 @@
+{
+  "id": "jobs",
+  "name": "Jobs",
+  "words": [
+    "doctor", "nurse", "teacher", "firefighter", ["police officer", "policeman", "cop"], "pilot", "chef", "farmer",
+    "dentist", "lawyer", "plumber", "electrician", "carpenter", "mechanic", "astronaut", "scientist",
+    "artist", "musician", "actor", "photographer", "journalist", "librarian", "baker", "butcher",
+    "barber", ["hairdresser", "hairstylist"], "waiter", "cashier", "lifeguard", "soldier", "judge", "architect",
+    "engineer", "programmer", "veterinarian", "magician", "clown", "detective", "mail carrier", "taxi driver",
+    "zookeeper", "gardener", "tailor", "dj"
+  ]
+}

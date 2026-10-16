@@ -1,0 +1,12 @@
+{
+  "id": "sports",
+  "name": "Sports",
+  "words": [
+    ["soccer", "football"], "basketball", "tennis", "golf", "baseball", "volleyball", "boxing", "swimming",
+    "surfing", "skiing", "snowboarding", "skateboarding", "cycling", "running", "bowling", "badminton",
+    ["table tennis", "ping pong"], "cricket", "rugby", "hockey", "wrestling", "karate", "judo", "fencing",
+    "archery", "rowing", "sailing", "diving", "gymnastics", "climbing", "chess", "darts",
+    "billiards", "marathon", "horse racing", "figure skating", "sumo", "yoga", "weightlifting", "polo",
+    "handball", "kayaking", "triathlon", "dodgeball"
+  ]
+}

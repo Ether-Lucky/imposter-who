@@ -1,0 +1,12 @@
+{
+  "id": "animals",
+  "name": "Animals",
+  "words": [
+    "elephant", "giraffe", "penguin", "kangaroo", "octopus", "dolphin", "shark", "tiger",
+    "lion", "zebra", "monkey", "panda", "koala", "owl", "eagle", "parrot",
+    "flamingo", "crocodile", "snake", "turtle", "frog", "rabbit", "hamster", "squirrel",
+    "camel", "horse", "cow", "pig", "sheep", "goat", "chicken", "duck",
+    "bee", "butterfly", "spider", "jellyfish", "whale", "bat", "wolf", "fox",
+    "hedgehog", "sloth", "peacock", "seal"
+  ]
+}

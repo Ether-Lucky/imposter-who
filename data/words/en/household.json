@@ -1,0 +1,12 @@
+{
+  "id": "household",
+  "name": "Household",
+  "words": [
+    "toothbrush", "pillow", "blanket", "mirror", "umbrella", "candle", "clock", "lamp",
+    "sofa", "fridge", "microwave", "toaster", "kettle", "blender", "vacuum", "broom",
+    "ladder", "hammer", "scissors", "stapler", "remote control", "television", "doorbell", "curtain",
+    "carpet", "bathtub", "shower", "towel", "soap", "shampoo", "toilet paper", "laundry basket",
+    "iron", "hanger", "spoon", "fork", "frying pan", "teapot", "bookshelf", "wardrobe",
+    "alarm clock", "key", "trash can", "mattress"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "places",
+  "name": "Places",
+  "words": [
+    "beach", "hospital", "airport", "library", "museum", "school", "church", "zoo",
+    "cinema", "restaurant", "supermarket", "bakery", "gym", "park", "playground", "stadium",
+    "castle", "prison", "farm", "forest", "desert", "jungle", "volcano", "island",
+    "mountain", "cave", "bank", "hotel", "train station", "bus stop", "lighthouse", "bridge",
+    "casino", "circus", "aquarium", "mall", "office", "kitchen", "bathroom", "garage",
+    "spaceship", "submarine", "camping site", "waterfall"
+  ]
+}

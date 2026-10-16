@@ -1,0 +1,12 @@
+{
+  "id": "movies",
+  "name": "Movies",
+  "words": [
+    "titanic", "jaws", "frozen", "shrek", "avatar", "toy story", "the lion king", "jurassic park",
+    "star wars", "harry potter", "spider-man", "batman", "superman", "finding nemo", "the matrix", "home alone",
+    "ghostbusters", "rocky", "e.t.", "inception", "up", "cars", "coco", "moana",
+    "aladdin", "cinderella", "mulan", "minions", "kung fu panda", "the incredibles", "ratatouille", "wall-e",
+    "barbie", "godzilla", "king kong", "pirates of the caribbean", "the avengers", "back to the future", "grease", "mean girls",
+    "the godfather", "top gun", "encanto", "inside out"
+  ]
+}
