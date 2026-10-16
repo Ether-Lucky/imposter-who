@@ -95,7 +95,7 @@ Functional screens with plain styling, to prove the flow on real phones before i
 - [ ] **T8.2** Automated UI lint pass on changed UI; fix mechanical findings.
 - [ ] **T8.3** Desktop + mobile screenshots; final design review; act on its findings.
 - [ ] **T8.4** Write `DESIGN.md` from the built world.
-- [ ] **T8.5** README: how to start, how phones join, firewall note, secrecy model.
+- [x] **T8.5** README: how to start, how phones join, firewall note, secrecy model.
 
 ---
 

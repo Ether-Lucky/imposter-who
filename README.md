@@ -63,12 +63,14 @@ The address changes every time you run it, and the laptop must stay on while you
 ### Game modes
 
 **Classic**
+
 - If the imposter gets the most votes, they get one **last chance** to name the destination. Wrong: civilians win. Right: the imposter steals the win.
 - If an innocent player gets the most votes, the imposter wins.
 - Tie: one revote between the tied players. A second tie means the imposter wins.
 - The imposter may also **guess the word early** (if that setting is on). A right guess wins, a wrong guess loses.
 
 **Manhunt**
+
 - The imposter can **never guess**. Their only way to win is to blend in.
 - A match is several rounds with the **same imposter** and a **new word every round**.
 - Vote out the imposter and the civilians win.
@@ -79,26 +81,26 @@ The address changes every time you run it, and the laptop must stay on while you
 
 ### Scores
 
-| | Classic | Manhunt |
-|---|---|---|
-| Civilians win | each civilian +1 | every civilian of the match +1 (including those out) |
-| Imposter wins by vote | +2 | +3 |
-| Imposter wins by guessing the word | +3 | (no guessing) |
+|                                    | Classic          | Manhunt                                              |
+| ---------------------------------- | ---------------- | ---------------------------------------------------- |
+| Civilians win                      | each civilian +1 | every civilian of the match +1 (including those out) |
+| Imposter wins by vote              | +2               | +3                                                   |
+| Imposter wins by guessing the word | +3               | (no guessing)                                        |
 
 ---
 
 ## Settings (on the board, before a round)
 
-| Setting | Options |
-|---|---|
-| Game mode | Classic, Manhunt |
-| Lives (Manhunt) | 1, 2, 3, Unlimited |
-| Clue mode | Typed on phone, Spoken aloud |
-| Laps per round | 1, 2, 3 |
-| Clue, discussion and vote timers | Off or a number of seconds |
-| Categories | 8 built-in English categories, plus your own |
-| Show the category to the imposter | On / Off |
-| Imposter can guess early (Classic) | On / Off |
+| Setting                            | Options                                      |
+| ---------------------------------- | -------------------------------------------- |
+| Game mode                          | Classic, Manhunt                             |
+| Lives (Manhunt)                    | 1, 2, 3, Unlimited                           |
+| Clue mode                          | Typed on phone, Spoken aloud                 |
+| Laps per round                     | 1, 2, 3                                      |
+| Clue, discussion and vote timers   | Off or a number of seconds                   |
+| Categories                         | 8 built-in English categories, plus your own |
+| Show the category to the imposter  | On / Off                                     |
+| Imposter can guess early (Classic) | On / Off                                     |
 
 **Your own word lists:** in the settings, open **Edit custom lists**. Type one word per line; add other accepted spellings after a slash (`doughnut / donut`). Players can see the board, so edit before they arrive.
 
@@ -123,14 +125,14 @@ The server sends each phone only what that player may see; the secret word and t
 
 ## For developers
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Server with reload, plus Vite dev server on port 5173 (open `http://localhost:5173/host`) |
-| `npm test` | All tests (rules engine, server with real sockets, screens) |
-| `npm run typecheck` | TypeScript checks for every package |
-| `npm run lint` | ESLint |
-| `npm run bots -- 3` | Adds 3 bot players to a running game, for testing with few phones |
-| `npm run build` | Type-check and build the phone and board pages |
+| Command             | What it does                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run dev`       | Server with reload, plus Vite dev server on port 5173 (open `http://localhost:5173/host`) |
+| `npm test`          | All tests (rules engine, server with real sockets, screens)                               |
+| `npm run typecheck` | TypeScript checks for every package                                                       |
+| `npm run lint`      | ESLint                                                                                    |
+| `npm run bots -- 3` | Adds 3 bot players to a running game, for testing with few phones                         |
+| `npm run build`     | Type-check and build the phone and board pages                                            |
 
 Open several test "phones" in one browser with `/play?as=name`; each name keeps its own seat.
 
