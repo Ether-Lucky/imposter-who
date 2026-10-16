@@ -10,6 +10,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
+import { FlapMotion } from './Flap.tsx';
 import { boardGrid, place, type Grid } from './grid.ts';
 import './flap.css';
 
@@ -51,6 +52,7 @@ const Blanks = memo(function Blanks({ count }: { count: number }) {
 export function BoardGrid({ children }: { children: ReactNode }) {
   const [width, height] = useViewport();
   const grid = boardGrid(width, height);
+  const forcedReduced = useContext(FlapMotion).reduced;
   const style = {
     '--cell-h': `${grid.cellH}px`,
     '--board-cols': grid.cols,
@@ -60,7 +62,7 @@ export function BoardGrid({ children }: { children: ReactNode }) {
   } as CSSProperties;
   return (
     <BoardContext.Provider value={grid}>
-      <div className="board" style={style}>
+      <div className="board" style={style} data-reduced={forcedReduced || undefined}>
         <Blanks count={grid.cols * grid.rows} />
         <div className="board-layer">{children}</div>
       </div>

@@ -132,7 +132,9 @@ export function PassengerRows({
                 <FlapRow text={count} width={2} row={i} tone={isAccused ? 'amber' : 'ink'} />
               </BoardItem>
             )}
-            <BoardItem col={-1} row={r} w={12} className={cls}>
+            {/* The status stays at full strength in a dimmed row: dim or red text at 60% misses
+                AA contrast (REQ-UX-7), and the word is what says why the row is dimmed. */}
+            <BoardItem col={-1} row={r} w={12} className={cls === 'board-row-dim' ? '' : cls}>
               {renderStatus?.(row, r) ?? <FlapRow text={status} width={12} row={i} tone={tone} />}
             </BoardItem>
             {onRowClick && (

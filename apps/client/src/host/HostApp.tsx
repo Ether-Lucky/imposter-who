@@ -38,7 +38,7 @@ function Connected({ conn }: { conn: Connection<HostView> }) {
       {status === 'offline' && (
         <p
           role="status"
-          className="fixed inset-x-0 top-0 z-30 bg-red px-6 py-2 text-center font-bold text-ink"
+          className="fixed inset-x-0 top-0 z-30 bg-red px-6 py-2 text-center text-xl font-bold text-ink"
         >
           Lost the game server. Is it still running? Reconnecting…
         </p>

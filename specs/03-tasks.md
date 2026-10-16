@@ -91,10 +91,10 @@ Functional screens with plain styling, to prove the flow on real phones before i
 
 ## M8 · Finish
 
-- [ ] **T8.1** Run the 04 §10 pre-flight checklist.
-- [ ] **T8.2** Automated UI lint pass on changed UI; fix mechanical findings.
-- [ ] **T8.3** Desktop + mobile screenshots; final design review; act on its findings.
-- [ ] **T8.4** Write `DESIGN.md` from the built world.
+- [x] **T8.1** Run the 04 §10 pre-flight checklist.
+- [x] **T8.2** Automated UI lint pass on changed UI; fix mechanical findings. (`apps/client/test/preflight.test.ts`: palette, banned items, contrast.)
+- [x] **T8.3** Desktop + mobile screenshots; final design review; act on its findings.
+- [x] **T8.4** Write `DESIGN.md` from the built world.
 - [x] **T8.5** README: how to start, how phones join, firewall note, secrecy model.
 
 ---

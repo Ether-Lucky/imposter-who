@@ -1,6 +1,6 @@
 /**
  * REQ-LOBBY-3 settings as a station timetable (04 §4.3): a panel that slides up over the
- * passenger rows. Each value is a flap selector; pressing ◀ ▶ flaps the value cell.
+ * passenger rows. Each value is a flap selector; the arrows either side flap the value cell.
  */
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import type { Settings as SettingsT } from '@imposter-who/core';

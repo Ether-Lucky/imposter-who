@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import type { Category, RawCategory } from '@imposter-who/core';
 import { Button } from '../ui/Button.tsx';
+import { ErrorText } from '../ui/ErrorText.tsx';
 import { saveCustomCategories, type CategoryList } from './api.ts';
 
 interface Draft {
@@ -129,7 +130,7 @@ export function CategoryEditor({
           <Button tone="ghost" onClick={onClose}>
             Cancel
           </Button>
-          {error && <p className="text-red">{error}</p>}
+          {error && <ErrorText>{error}</ErrorText>}
         </footer>
       </section>
     </div>

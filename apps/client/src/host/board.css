@@ -230,4 +230,22 @@
     z-index: 20;
     pointer-events: none;
   }
+
+  /* The host's "Reduce motion" setting, for the CSS-driven moves (REQ-UX-2). */
+  .board[data-reduced] .board-panel[data-state] {
+    transition: opacity 150ms linear;
+    transform: none;
+  }
+
+  .board[data-reduced] .board-panel[data-state='closed'] {
+    opacity: 0;
+  }
+
+  .board[data-reduced] .board-row-lift {
+    transform: none;
+  }
+
+  .board[data-reduced] :is(.sign-amber:enabled::after, .lap-sweep, .headline-blink) {
+    animation: none;
+  }
 }

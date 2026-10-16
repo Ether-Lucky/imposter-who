@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Ack, PlayerView } from '@imposter-who/core';
+import { FlapMotion } from '../flap/Flap.tsx';
 import { burstConfetti } from '../fx/confetti.ts';
 import { formatClock } from '../net/clock.ts';
 import type { Status } from '../net/connection.ts';
@@ -12,6 +13,7 @@ import { useCountdown } from '../net/useCountdown.ts';
 import { Button } from '../ui/Button.tsx';
 import { HoldButton } from '../ui/HoldButton.tsx';
 import { OUTCOME_LABEL, PHASE_LABEL, livesLabel, nameOf } from '../ui/labels.ts';
+import { ErrorText } from '../ui/ErrorText.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 import { FeedbackToggle, feedback } from './feedback.tsx';
 import { Barcode, Stamp, TicketCard, type TicketMode } from './Ticket.tsx';
@@ -122,11 +124,7 @@ function Join({ send, inRound }: { send: Send; inRound: boolean }) {
                 Up to 12 characters. Others will see it on the board.
               </span>
             </label>
-            {error && (
-              <p role="alert" className="font-bold text-red">
-                {error}
-              </p>
-            )}
+            {error && <ErrorText>{error}</ErrorText>}
             {inRound && (
               <p className="text-sm">A round is running. You'll board on the next one.</p>
             )}
@@ -164,11 +162,7 @@ function ClueInput({ send, spoken }: { send: Send; spoken: boolean }) {
         >
           Done
         </Button>
-        {error && (
-          <p role="alert" className="text-center text-red">
-            {error}
-          </p>
-        )}
+        {error && <ErrorText>{error}</ErrorText>}
       </>
     );
   }
@@ -201,11 +195,7 @@ function ClueInput({ send, spoken }: { send: Send; spoken: boolean }) {
           className={`min-h-14 rounded-md border-2 bg-flap px-4 text-2xl font-bold uppercase focus:outline-none ${text ? 'border-amber' : 'border-ink/30'}`}
         />
       </label>
-      {error && (
-        <p role="alert" className="text-center font-bold text-red">
-          {error}
-        </p>
-      )}
+      {error && <ErrorText>{error}</ErrorText>}
       <Button type="submit" tone="primary" className="min-h-14 text-xl" disabled={busy || !text}>
         Send clue
       </Button>
@@ -231,11 +221,7 @@ function GuessForm({ send, onCancel }: { send: Send; onCancel?: () => void }) {
         />
       </label>
       <p className="text-sm text-ink-dim">One guess. Right wins it for you, wrong loses it.</p>
-      {error && (
-        <p role="alert" className="font-bold text-red">
-          {error}
-        </p>
-      )}
+      {error && <ErrorText>{error}</ErrorText>}
       <HoldButton disabled={!text.trim()} onConfirm={() => void run('guess:submit', { text })}>
         Hold to guess
       </HoldButton>
@@ -275,7 +261,7 @@ function PunchList({ view, send }: { view: PlayerView; send: Send }) {
                 className="punch-row"
               >
                 <span className="flex items-baseline gap-3">
-                  <span className="text-sm tabular-nums opacity-60">
+                  <span className="text-sm tabular-nums opacity-70">
                     {String(seat + 1).padStart(2, '0')}
                   </span>
                   {nameOf(view, id)}
@@ -286,11 +272,7 @@ function PunchList({ view, send }: { view: PlayerView; send: Send }) {
           );
         })}
       </ul>
-      {error && (
-        <p role="alert" className="text-red">
-          {error}
-        </p>
-      )}
+      {error && <ErrorText>{error}</ErrorText>}
     </div>
   );
 }
@@ -397,7 +379,19 @@ function useResultFeedback(view: PlayerView | null) {
   }, [key, won, reduced]);
 }
 
-export function PlayScreen({ view, offset, status, kicked, send, onRejoin }: PlayScreenProps) {
+/** The host's "Reduce motion" setting reaches every phone too (REQ-UX-2). */
+export function PlayScreen(props: PlayScreenProps) {
+  const reduced = props.view?.settings.reducedMotion ? true : undefined;
+  return (
+    <FlapMotion.Provider value={{ reduced }}>
+      <div data-reduced={reduced}>
+        <Controller {...props} />
+      </div>
+    </FlapMotion.Provider>
+  );
+}
+
+function Controller({ view, offset, status, kicked, send, onRejoin }: PlayScreenProps) {
   const [guessing, setGuessing] = useState(false);
   // After tearing, the face stays up on this phone until hidden, even if the game moves on.
   // Otherwise the last player to tear would skip straight to clues without seeing it.
@@ -409,7 +403,7 @@ export function PlayScreen({ view, offset, status, kicked, send, onRejoin }: Pla
     status === 'offline' || status === 'connecting' ? (
       <p
         role="status"
-        className="fixed inset-x-0 top-0 z-10 bg-red px-4 py-2 text-center font-bold"
+        className="fixed inset-x-0 top-0 z-10 bg-red px-4 py-2 text-center text-xl font-bold"
       >
         {status === 'connecting' ? 'Finding the board…' : 'Reconnecting to the board…'}
       </p>

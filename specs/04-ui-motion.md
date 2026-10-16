@@ -343,12 +343,12 @@ Still to do with the owner: the same check on a real mid-range Android phone (T3
 
 ## 10. Pre-flight checklist (run in M8)
 
-- [ ] Palette: only the tokens in 1.2 appear anywhere.
-- [ ] Every element on the host display sits on the flap grid.
-- [ ] Role-identical controller layout verified by screenshot diff (civilian vs imposter, every phase).
-- [ ] Every animation has a reduced-motion path; nothing is hidden while animations run (content visible by default).
-- [ ] No em dashes, no emoji icons, no Inter, no glow, no purple.
-- [ ] Touch targets ≥ 48px, primary actions in the bottom third.
-- [ ] Contrast AA on all pairs.
-- [ ] Automated UI lint pass (anti-patterns, contrast, palette) on the changed UI, findings fixed.
-- [ ] Final design review run; DESIGN.md written from the built world.
+- [x] Palette: only the tokens in 1.2 appear anywhere.
+- [x] Every element on the host display sits on the flap grid.
+- [x] Role-identical controller layout verified by screenshot diff (civilian vs imposter, every phase).
+- [x] Every animation has a reduced-motion path; nothing is hidden while animations run (content visible by default).
+- [x] No em dashes, no emoji icons, no Inter, no glow, no purple.
+- [x] Touch targets ≥ 48px, primary actions in the bottom third. (Checked in screenshots at 390×844; still to feel on real phones in T3.4.)
+- [x] Contrast AA on all pairs. (Red only as large text or a bar; dimmed rows keep their status at full strength.)
+- [x] Automated UI lint pass (anti-patterns, contrast, palette) on the changed UI, findings fixed.
+- [x] Final design review run; DESIGN.md written from the built world.

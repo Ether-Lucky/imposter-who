@@ -436,11 +436,35 @@
     .punch-row[aria-pressed='true'] .punch-hole::after {
       animation-duration: 1ms;
     }
+  }
 
-    @keyframes fade-in {
-      from {
-        opacity: 0;
-      }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
     }
+  }
+
+  /* The host's "Reduce motion" setting does the same on every phone (REQ-UX-2). */
+  [data-reduced] :is(.flip-in, .ticket-print, .sheet) {
+    animation: swap-in 200ms linear both;
+  }
+
+  [data-reduced] .stamp {
+    animation: fade-in 200ms linear both;
+  }
+
+  [data-reduced] :is(.barcode, .barcode[data-breathe]) {
+    animation: none;
+  }
+
+  [data-reduced]
+    :is(
+      .shutter-open,
+      .shutter-close,
+      .print-out,
+      .punch-row[aria-pressed='true'] .punch-hole,
+      .punch-row[aria-pressed='true'] .punch-hole::after
+    ) {
+    animation-duration: 1ms;
   }
 }

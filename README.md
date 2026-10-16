@@ -4,7 +4,7 @@ A social deduction party game for 3 to 15 people in the same room. A laptop runs
 
 Everyone gets the same secret word except one player, the **imposter**, who only knows they are the imposter. Players take turns giving one-word clues, argue about who sounded fake, and vote.
 
-> Status: fully playable with plain screens. The split-flap "Departure Board" look and its animations are next (see [specs/03-tasks.md](specs/03-tasks.md)).
+The laptop shows a split-flap **departure board**; each phone holds a paper **ticket** you tear open to see your destination. The look and feel are documented in [DESIGN.md](DESIGN.md).
 
 ---
 
@@ -101,6 +101,12 @@ The address changes every time you run it, and the laptop must stay on while you
 | Categories                         | 8 built-in English categories, plus your own |
 | Show the category to the imposter  | On / Off                                     |
 | Imposter can guess early (Classic) | On / Off                                     |
+| Sound on this laptop               | On / Off                                     |
+| Reduce motion                      | On / Off (also applies to every phone)       |
+
+Open the settings with **TIMETABLE** at the bottom left of the board; **RULES** plays a short how-to-play on the board, and **HELP** has the phone connection checklist with a test of the address.
+
+**Sound and vibration:** the board plays its station sounds after the first click on it. Each phone has its own button at the top right: vibration only (the default), vibration and sound, or off.
 
 **Your own word lists:** in the settings, open **Edit custom lists**. Type one word per line; add other accepted spellings after a slash (`doughnut / donut`). Players can see the board, so edit before they arrive.
 
@@ -133,15 +139,19 @@ The server sends each phone only what that player may see; the secret word and t
 | `npm run lint`      | ESLint                                                                                    |
 | `npm run bots -- 3` | Adds 3 bot players to a running game, for testing with few phones                         |
 | `npm run build`     | Type-check and build the phone and board pages                                            |
+| `npm run e2e`       | Plays a full round in a real browser: the board and three phones (see below)              |
 
 Open several test "phones" in one browser with `/play?as=name`; each name keeps its own seat.
 
-**Stack:** Node 24, TypeScript, Socket.IO, Express, React 19, Vite, Tailwind CSS, Vitest.
+**End-to-end test:** run `npx playwright install chromium` once, then `npm run e2e`. It starts its own server on fresh settings (ports 3000 and 5173 must be free). To use an installed browser instead, set `PW_CHANNEL=msedge` or `PW_CHANNEL=chrome`. `DATA_DIR=<folder>` points any server run at a different settings folder.
+
+**Stack:** Node 24, TypeScript, Socket.IO, Express, React 19, Vite, Tailwind CSS, Motion, Vitest, Playwright. Fonts: Big Shoulders Display and Atkinson Hyperlegible (both OFL, bundled). Sounds are synthesised in the browser, so there are no audio files.
 
 ```
 packages/core   the game rules as a pure, fully tested reducer, plus what each screen may see
 apps/server     Express + Socket.IO server, timers, LAN and QR, saved settings
-apps/client     the board (/host) and the phone ticket (/play)
+apps/client     the board (/host) and the phone ticket (/play); src/flap is the split-flap engine
+e2e/            end-to-end test of a full round
 data/words/en   built-in word lists
 specs/          requirements, design, UI and motion spec, task list
 scripts/        online play through a Cloudflare tunnel
