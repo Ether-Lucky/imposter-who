@@ -21,7 +21,8 @@ const hostKey = publicMode
   : undefined;
 
 const server = createGameServer({
-  dataDir: join(root, '.data'),
+  // DATA_DIR lets tests run against fresh settings without touching the host's own.
+  dataDir: process.env.DATA_DIR || join(root, '.data'),
   wordsDir: join(root, 'data/words/en'),
   clientDist: dev ? undefined : join(root, 'apps/client/dist'),
   // In dev, phones reach us through the Vite proxy, which reports their real address.

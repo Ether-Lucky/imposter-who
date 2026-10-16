@@ -19,16 +19,20 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "bots": "npm run bots -w @imposter-who/server --",
-    "public": "node scripts/public.mjs"
+    "public": "node scripts/public.mjs",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@types/node": "^24.19.2",
+    "@types/pngjs": "^6.0.5",
     "concurrently": "^10.0.6",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2",

@@ -119,17 +119,17 @@ The flap board is the product's signature. It must feel mechanical and real.
 
 **Flip a cell from A to B:**
 1. Walk the drum forward from A to B (never backwards). Each step is one flip.
-2. One flip = the top half of the current character rotates `rotateX(0 → -90deg)` with `--flap-fall` (45 ms), then the bottom half of the next character rotates `rotateX(90deg → 0)` with `--ease-out` (45 ms), overshooting to `-6deg` and settling (a little mechanical bounce).
-3. A shade gradient darkens the falling half (opacity 0 → 0.5) to fake light.
-4. Long walks speed up: steps after the 8th take 30 ms each. Max 40 steps; beyond that, jump the drum.
+2. One flip = the top half of the current character folds down to the seam with `--flap-fall` (45 ms), then the bottom half of the next character unfolds from the seam with `--ease-out` (45 ms), overshooting slightly and settling (a little mechanical bounce). Built as a flat fold (`scaleY`) rather than a 3D `rotateX`: identical at this speed, and far cheaper (T7.4).
+3. A shade gradient darkens the falling half towards its free edge to fake light (static, so each step animates only the two halves).
+4. Long walks speed up: steps after the 8th take 30 ms each. Max 24 steps; beyond that, jump the drum. (Planned as 40; cut in T7.4 so full-board changes keep their frame rate.)
 
 **Cascades:** when a row changes, each cell starts with `index × 18 ms + random(0–25 ms)` delay, so rows ripple left to right with organic jitter. Whole-board changes stagger rows top to bottom by 40 ms.
 
 **Sound:** each settled cell fires a tick from a pooled Web Audio buffer, rate-limited to 60 ticks/s and pitch-jittered ±6%, so a full-board cascade sounds like a real clatter, not a buzz.
 
-**Budget:** at most 320 cells mid-flip at once; extra changes queue. Animated elements get `will-change: transform` only while flipping. While `document.hidden`, cells settle straight to their final text and queued flips are dropped (nobody is watching, and the board is correct when the tab returns).
+**Budget:** at most 160 cells mid-flip at once (planned as 320; halved in T7.4); extra changes queue. A cell's two leaves are raised once for its whole walk and get no `will-change` (WAAPI transforms composite on their own; toggling per step made the browser rebuild layers every step, T7.4). While `document.hidden`, cells settle straight to their final text and queued flips are dropped (nobody is watching, and the board is correct when the tab returns).
 
-**Timing:** each step is pinned to a planned time on the document timeline, so frame-boundary delays do not add up over a long walk. Measured in T4.2: a full-board change with 40-step walks settles in about 2.2 s.
+**Timing:** each step is pinned to a planned time on the document timeline, so frame-boundary delays do not add up over a long walk. Measured in T4.2: a full-board change with 40-step walks settled in about 2.2 s; with the 24-step cap, about 1.5 s.
 
 **Reduced motion:** a cell crossfades A → B in 120 ms; ticks are reduced to one per row.
 
@@ -322,7 +322,7 @@ Triggered by `prefers-reduced-motion: reduce` or the host setting:
 | Item | Budget |
 |---|---|
 | Host fps during full-board cascade | ≥ 45 on integrated GPU at 1080p |
-| Cells mid-flip at once | ≤ 320 |
+| Cells mid-flip at once | ≤ 160 |
 | Controller JS (gzipped) | < 200 KB |
 | Fonts | 2 families, subset, woff2, < 120 KB total |
 | Audio | < 600 KB total, decoded lazily after first interaction |
@@ -330,6 +330,14 @@ Triggered by `prefers-reduced-motion: reduce` or the host setting:
 | Confetti | ≤ 180 particles host, ≤ 60 phone, auto-stops |
 
 Measure in M8 with the Chrome performance panel and a real mid-range Android phone.
+
+**Measured in T7.4** (production build, 15 passengers, 1920×1080, headless Edge with software rendering, so a real GPU only does better): idle 58 fps; round-start cascade 53 fps average (95th percentile frame 34 ms); vote reveal 55 fps (95th 18 ms). Controller JS: about 97 KB gzipped. What got it there, from a first measurement of 24 and 11 fps:
+
+- Flap cells and rows are memoised; the vote reveal re-renders only when a beat changes.
+- A cell's leaves stay raised for its whole walk, and fold flat (`scaleY` of a registered `--fold` property) instead of a 3D `rotateX`: no compositor layer per moving leaf.
+- At most 160 cells flip at once, walks cap at 24 steps, the shade is static, and cells use `contain: strict`.
+
+Still to do with the owner: the same check on a real mid-range Android phone (T3.4).
 
 ---
 

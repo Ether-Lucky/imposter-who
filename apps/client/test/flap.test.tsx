@@ -28,7 +28,7 @@ describe('UX flap engine: drum walk (04 §3)', () => {
     expect(drumPath('q', 'Q')).toEqual([]);
   });
 
-  it('caps long walks at 40 steps by jumping the drum, still ending on the target', () => {
+  it('caps long walks at 24 steps by jumping the drum, still ending on the target', () => {
     const path = drumPath('B', 'A');
     expect(path.length).toBe(MAX_STEPS);
     expect(path.at(-1)).toBe('A');
@@ -54,8 +54,8 @@ describe('UX flap engine: timing (04 §3)', () => {
     expect(walkMs(10)).toBe(8 * 90 + 2 * 30);
   });
 
-  it('keeps the longest walk under 1.7 s', () => {
-    expect(walkMs(MAX_STEPS)).toBeLessThan(1700);
+  it('keeps the longest walk under 1.3 s', () => {
+    expect(walkMs(MAX_STEPS)).toBeLessThan(1300);
   });
 
   it('ripples cells left to right by 18 ms and rows top to bottom by 40 ms, plus up to 25 ms jitter', () => {

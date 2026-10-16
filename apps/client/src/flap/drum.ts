@@ -7,16 +7,23 @@
 /** The drum, in order, like a real split-flap unit (04 §3). Index 0 is blank. */
 export const DRUM = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-'!?:/";
 
-/** Longest walk; a longer one jumps the drum and walks only the last steps. */
-export const MAX_STEPS = 40;
+/**
+ * Longest walk; a longer one jumps the drum and walks only the last steps. 24, not the
+ * 40 first planned: measured in T7.4, full-board changes stay smooth and still read as a
+ * drum walk.
+ */
+export const MAX_STEPS = 24;
 /** Steps 1 to 8 are full speed flips; later steps speed up. */
 export const SLOW_STEPS = 8;
 /** One half of a flip (top falls, then bottom rises), in ms. */
 export const HALF_MS = 45;
 /** One half of a flip once the walk has sped up (a whole step is 30 ms). */
 export const FAST_HALF_MS = 15;
-/** Most cells mid-flip at once across the board (04 §3, §9). */
-export const MAX_ACTIVE = 320;
+/**
+ * Most cells mid-flip at once across the board (04 §3, §9). Planned as 320; measured in
+ * T7.4, 160 keeps frames even and only stretches the biggest cascades a little.
+ */
+export const MAX_ACTIVE = 160;
 /** Reduced motion: a cell crossfades instead of walking (04 §8). */
 export const FADE_MS = 120;
 

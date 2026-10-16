@@ -80,6 +80,17 @@ export function beatAt(plan: RevealPlan, voters: number, t: number): RevealBeat 
   };
 }
 
+export function sameBeat(a: RevealBeat, b: RevealBeat): boolean {
+  return (
+    a.votesShown === b.votesShown &&
+    a.tally === b.tally &&
+    a.collapsed === b.collapsed &&
+    a.lifted === b.lifted &&
+    a.announced === b.announced &&
+    a.done === b.done
+  );
+}
+
 /** The headline once the count is in. */
 export function revealHeadline(
   result: RevealResult,

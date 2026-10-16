@@ -6,6 +6,7 @@
  */
 import {
   createContext,
+  memo,
   useContext,
   useEffect,
   useRef,
@@ -93,7 +94,8 @@ function show(parts: Parts, ch: string) {
   delete parts.rise.dataset.on;
 }
 
-export function FlapCell({
+/** Memoised: a board re-render only touches cells whose character or tone changed. */
+export const FlapCell = memo(function FlapCell({
   char,
   index = 0,
   row = 0,
@@ -142,6 +144,10 @@ export function FlapCell({
         // each step loses waiting to start and finish does not pile up over a long walk:
         // a late step just plays the rest of its flip.
         let planned = Number(document.timeline.currentTime ?? performance.now());
+        // The leaves stay up for the whole walk: toggling them every step made the browser
+        // rebuild compositor layers for every cell on every step (T7.4 trace).
+        parts.fall.dataset.on = '';
+        parts.rise.dataset.on = '';
         for (let n = 0; n < path.length; n++) {
           if (cancelled) return;
           if (hidden) return settle();
@@ -154,16 +160,11 @@ export function FlapCell({
           parts.riseText.textContent = next;
           // Both halves are scheduled at once (the rise waits out the fall with `delay`),
           // so each step costs one await, not two: long walks stay near their budget.
-          parts.fall.dataset.on = '';
-          parts.rise.dataset.on = '';
+          const previous = running.splice(0);
           const rise = parts.rise.animate(
             last
-              ? [
-                  { transform: 'rotateX(90deg)' },
-                  { transform: 'rotateX(-6deg)', offset: 0.6 },
-                  { transform: 'rotateX(0deg)' },
-                ]
-              : [{ transform: 'rotateX(90deg)' }, { transform: 'rotateX(0deg)' }],
+              ? [{ '--fold': '0' }, { '--fold': '1.08', offset: 0.6 }, { '--fold': '1' }]
+              : [{ '--fold': '0' }, { '--fold': '1' }],
             {
               delay: half,
               duration: last ? half + SETTLE_MS : half,
@@ -172,26 +173,26 @@ export function FlapCell({
             },
           );
           const step = [
-            parts.fall.animate([{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(-90deg)' }], {
+            parts.fall.animate([{ '--fold': '1' }, { '--fold': '0' }], {
               duration: half,
               easing: EASE_FALL,
               fill: 'forwards',
             }),
-            parts.shade.animate([{ opacity: 0 }, { opacity: 0.5 }], half),
             rise,
           ];
           for (const anim of step) anim.startTime = planned;
           planned += 2 * half + (last ? SETTLE_MS : 0);
           running.push(...step);
+          // Drop the last step's held poses only now, so no leaf ever snaps flat in between.
+          for (const anim of previous) anim.cancel();
           await rise.finished;
           if (cancelled) return;
           shown.current = next;
           parts.bottom.textContent = next;
           onStep?.();
-          delete parts.fall.dataset.on;
-          delete parts.rise.dataset.on;
-          for (const anim of running.splice(0)) anim.cancel();
         }
+        delete parts.fall.dataset.on;
+        delete parts.rise.dataset.on;
       } catch {
         // A cancelled animation rejects `finished`; the cleanup below already settled.
       } finally {
@@ -238,13 +239,13 @@ export function FlapCell({
       </span>
     </span>
   );
-}
+});
 
 /**
  * A row of flap cells showing `text`, padded or cut to `width` cells. Screen readers get
  * the text once, not cell by cell.
  */
-export function FlapRow({
+export const FlapRow = memo(function FlapRow({
   text,
   width = Array.from(text).length,
   row = 0,
@@ -266,4 +267,4 @@ export function FlapRow({
       ))}
     </span>
   );
-}
+});

@@ -23,7 +23,7 @@ import {
   headline,
   infoLine,
 } from './model.ts';
-import { beatAt, revealHeadline, revealPlan } from './revealTimeline.ts';
+import { beatAt, revealHeadline, revealPlan, sameBeat, type RevealBeat } from './revealTimeline.ts';
 import { SignRun, signRunWidth, type SignSpec } from './Sign.tsx';
 import type { HostScreenProps, Send } from './types.ts';
 
@@ -129,29 +129,40 @@ function Shuffle({ room }: { room: number }) {
 function useRevealClock(view: HostView, send: Send, reduced: boolean) {
   const ballots = view.round?.ballots.length ?? 0;
   const active = view.phase === 'voteReveal';
-  // Elapsed time for one ballot's reveal. A new ballot (a revote) starts again from 0.
-  const [clock, setClock] = useState({ ballots, t: 0 });
-  const t = clock.ballots === ballots ? clock.t : 0;
+  // The beat for one ballot's reveal. A new ballot (a revote) starts again from 0. The
+  // board re-renders only when the beat changes, not on every tick.
   const skipped = useRef(-1);
   const sent = useRef(-1);
   const ballot = view.round?.ballots.at(-1);
+  const result = ballot?.result;
   const voters = view.round?.turnOrder.length ?? 0;
-  const plan = ballot ? revealPlan(voters, ballot.result, reduced) : null;
+  const [clock, setClock] = useState<{ ballots: number; beat: RevealBeat | null }>({
+    ballots,
+    beat: null,
+  });
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || !result) return;
+    const plan = revealPlan(voters, result, reduced);
     const t0 = performance.now();
-    // 20 ticks a second is plenty: beats are hundreds of ms apart, and the flaps animate
-    // themselves between ticks.
-    const id = setInterval(
-      () =>
-        setClock({ ballots, t: skipped.current === ballots ? Infinity : performance.now() - t0 }),
-      50,
-    );
+    const tick = () => {
+      const t = skipped.current === ballots ? Infinity : performance.now() - t0;
+      const next = beatAt(plan, voters, t);
+      setClock((c) =>
+        c.ballots === ballots && c.beat && sameBeat(c.beat, next) ? c : { ballots, beat: next },
+      );
+    };
+    tick();
+    const id = setInterval(tick, 50);
     return () => clearInterval(id);
-  }, [active, ballots]);
+  }, [active, ballots, result, voters, reduced]);
 
-  const beat = plan ? beatAt(plan, voters, t) : null;
+  const beat =
+    clock.ballots === ballots && clock.beat
+      ? clock.beat
+      : result
+        ? beatAt(revealPlan(voters, result, reduced), voters, 0)
+        : null;
   useEffect(() => {
     if (active && beat?.done && sent.current !== ballots) {
       sent.current = ballots;
@@ -164,7 +175,8 @@ function useRevealClock(view: HostView, send: Send, reduced: boolean) {
     ballot,
     skip: () => {
       skipped.current = ballots;
-      setClock({ ballots, t: Infinity });
+      if (result)
+        setClock({ ballots, beat: beatAt(revealPlan(voters, result, reduced), voters, Infinity) });
     },
   };
 }

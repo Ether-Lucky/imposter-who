@@ -112,11 +112,10 @@
   }
 
   .board-row-lift {
+    position: relative;
+    z-index: 2;
     transform: scale(1.04);
-    filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.6));
-    transition:
-      transform 700ms var(--ease-in-out),
-      filter 700ms var(--ease-in-out);
+    transition: transform 700ms var(--ease-in-out);
   }
 
   .live-bar {

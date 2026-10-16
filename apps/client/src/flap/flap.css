@@ -1,3 +1,14 @@
+/*
+ * How folded a moving leaf is: 1 flat, 0 edge-on. Animated as a registered property, so
+ * the fold runs as a cheap repaint of one small cell instead of hundreds of compositor
+ * layers (T7.4). At 45 ms a half, a flat fold reads exactly like a 3D flip.
+ */
+@property --fold {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
 /* Split-flap cell (04 §1.4, §3). Size comes from --cell-h, set by the board grid (T4.3). */
 .flap {
   position: relative;
@@ -9,8 +20,8 @@
   font-size: calc(var(--cell-h, 36px) * 0.78);
   font-weight: 700;
   color: var(--color-ink);
-  perspective: calc(var(--cell-h, 36px) * 6);
-  contain: layout paint;
+  /* Each cell is its own island: text swaps never re-lay out the rest of the board. */
+  contain: strict;
 }
 
 .flap[data-tone='amber'] {
@@ -77,20 +88,19 @@
 /* The moving leaves only exist on screen mid-flip. */
 .flap-leaf {
   visibility: hidden;
-  backface-visibility: hidden;
   z-index: 2;
+  transform: scaleY(var(--fold));
 }
 
 .flap-leaf[data-on] {
   visibility: visible;
-  will-change: transform;
 }
 
 .flap-shade {
+  /* The falling half darkens towards its free edge, as if turning away from the light. */
   position: absolute;
   inset: 0;
-  background: #000;
-  opacity: 0;
+  background: linear-gradient(rgb(0 0 0 / 0), rgb(0 0 0 / 0.45));
 }
 
 .flap-row {

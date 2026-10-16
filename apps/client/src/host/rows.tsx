@@ -124,7 +124,7 @@ export function PassengerRows({
             </BoardItem>
             {clue && clueW >= 4 && (
               <BoardItem col={clueCol} row={r} w={clueW} className={cls}>
-                <FlapRow text={fitWords(faded ? '' : row.clue, clueW)} width={clueW} row={i} />
+                <FlapRow text={fitWords(row.clue, clueW)} width={clueW} row={i} />
               </BoardItem>
             )}
             {counts && (

@@ -84,10 +84,10 @@ Functional screens with plain styling, to prove the flow on real phones before i
 
 ## M7 · Hardening
 
-- [ ] **T7.1** "Phones can't connect?" help card + LAN self-test + interface switcher. *CONN-1, 02 §7*
-- [ ] **T7.2** Edge cases from playtests (late joiners, removal mid-turn, double taps, very long names, 15 players on one board).
-- [ ] **T7.3** Playwright e2e: full round with host + 3 phones; civilian vs imposter screenshot diff with the word masked. *SEC-2, GUESS-5*
-- [ ] **T7.4** Performance pass on a mid-range laptop and Android phone. *UX-4, NFR-4, 04 §9*
+- [x] **T7.1** "Phones can't connect?" help card + LAN self-test + interface switcher. *CONN-1, 02 §7*
+- [x] **T7.2** Edge cases from playtests (late joiners, removal mid-turn, double taps, very long names, 15 players on one board).
+- [x] **T7.3** Playwright e2e: full round with host + 3 phones; civilian vs imposter screenshot diff with the word masked. *SEC-2, GUESS-5* (`npm run e2e`; `e2e/round.spec.ts`.)
+- [x] **T7.4** Performance pass on a mid-range laptop and Android phone. *UX-4, NFR-4, 04 §9* (Laptop side measured and fixed, see 04 §9; the Android check rides along with T3.4.)
 
 ## M8 · Finish
 
