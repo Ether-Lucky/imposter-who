@@ -70,6 +70,17 @@ const SETTING_RULES: { [K in keyof Settings]: (v: unknown) => boolean } = {
   reducedMotion: (v) => typeof v === 'boolean',
 };
 
+/** Keep only the valid keys of a settings object (used when loading saved settings). */
+export function sanitizeSettings(input: unknown): Partial<Settings> {
+  if (!input || typeof input !== 'object') return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const rule = SETTING_RULES[key as keyof Settings];
+    if (rule?.(value)) out[key] = value;
+  }
+  return out as Partial<Settings>;
+}
+
 export function initialState(settings: Partial<Settings> = {}): GameState {
   return {
     version: 0,

@@ -192,7 +192,7 @@ Tests fuzz random action sequences and assert: for every phase before `result`, 
 ## 5. Protocol
 
 One Socket.IO namespace. The handshake `auth` decides the role:
-- `{ kind: 'host' }` plus the `iw_host` cookie, from a loopback address (CONN-3).
+- `{ kind: 'host', hostToken }` from a loopback address (CONN-3). The host display gets the token from `GET /api/host-session`, which only answers loopback requests.
 - `{ kind: 'player', token }`, where `token` is a random 128-bit value stored in the phone's `localStorage` (RECON-1). The server stores only its hash.
 
 ### 5.1 Client → server (all with ack `{ ok: true } | { ok: false, code, message }`)
@@ -224,9 +224,10 @@ One Socket.IO namespace. The handshake `auth` decides the role:
 | `cue` | `{ cue, at }` | Role-neutral one-shot (e.g. `turnStart`, `clueLanded`, `finalCall`, `voteReveal`). Sent to everyone at once. |
 | `kicked` | `{ reason }` | Removed by host |
 
-### 5.3 REST (host-only, loopback + cookie)
+### 5.3 REST (host-only: loopback + `x-host-token`)
 
-- `GET /api/join-info` → `{ urls: string[], preferred, qrSvg }`
+- `GET /api/host-session` → `{ hostToken }` (loopback only, no token needed)
+- `GET /api/join-info?port=&address=` → `{ addresses, preferred, url, qrSvg }`
 - `GET/PUT /api/categories` → built-in (read-only) + custom (editable) (WORD-2)
 - `GET /api/health`
 
@@ -250,7 +251,7 @@ One Socket.IO namespace. The handshake `auth` decides the role:
 
 - **In scope:** someone glancing at another phone or the board, a player opening dev tools on their own phone, a phone opening `/host`.
 - **Out of scope:** sniffing plaintext Wi-Fi traffic, a hostile device on the LAN. This is a living-room game. Documented in the README.
-- **Host auth:** `GET /host` from a loopback address sets an `iw_host` cookie (random per server start, `HttpOnly`, `SameSite=Strict`). Host socket commands require both a loopback address (`X-Forwarded-For` trusted only in dev) and the cookie.
+- **Host auth:** a random host token is minted per server start. `GET /api/host-session` hands it out to loopback requests only. Host sockets and host REST routes (`x-host-token` header) need both a loopback address and the token. In dev, the request arrives through Vite's proxy, so the server trusts only the *last* `X-Forwarded-For` hop (the one the proxy appended); a phone cannot forge loopback by sending its own header.
 - **Input hygiene:** names and clues are length-limited, trimmed, stripped of control characters, and rendered as text only (never HTML).
 - **Rate limiting:** at most 10 actions/s per socket; extra are dropped.
 

@@ -54,7 +54,10 @@ export type ErrorCode =
   | 'NOT_ENOUGH_PLAYERS'
   | 'EMPTY_POOL'
   | 'SETTINGS_INVALID'
-  | 'SEATS_INVALID';
+  | 'SEATS_INVALID'
+  | 'NOT_HOST'
+  | 'BAD_REQUEST'
+  | 'RATE_LIMITED';
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   NAME_INVALID: 'Names are 1 to 12 characters.',
@@ -76,7 +79,25 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   EMPTY_POOL: 'Pick at least one category with words.',
   SETTINGS_INVALID: 'That setting is not allowed.',
   SEATS_INVALID: 'That seat order does not match the players.',
+  NOT_HOST: 'Only the board on the laptop can do that.',
+  BAD_REQUEST: 'That request was not understood.',
+  RATE_LIMITED: 'Slow down a little.',
 };
+
+/** Server to client: the full view after every change. Clients drop older versions. */
+export interface StateMessage<V> {
+  version: number;
+  serverNow: number;
+  view: V;
+}
+
+/** Server to client: removed by the host. */
+export interface KickedMessage {
+  reason: 'removed';
+}
+
+/** Handshake auth sent by each client. */
+export type HandshakeAuth = { kind: 'host'; hostToken: string } | { kind: 'player'; token: string };
 
 /** Role-neutral one-shot signals for sounds and haptics. Sent to everyone at once. */
 export type Cue =

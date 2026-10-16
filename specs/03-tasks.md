@@ -33,13 +33,13 @@ The order is deliberate: **rules first, plumbing second, looks third**. The game
 
 ## M2 · Server
 
-- [ ] **T2.1** Express + Socket.IO boot on `0.0.0.0`, LAN discovery, console join URL, open browser. *CONN-1, NFR-1*
-- [ ] **T2.2** Handshake auth: host cookie + loopback; player token hashing. *CONN-3, RECON-1*
-- [ ] **T2.3** GameHost: dispatch, effects, timers with phase keys, coalesced broadcasts, cues. *LOBBY-1*
-- [ ] **T2.4** Clock sync ping. 
-- [ ] **T2.5** Persistence of settings and custom words; REST routes; QR SVG. *LOBBY-3, WORD-2, CONN-2*
-- [ ] **T2.6** Rate limit + input hygiene. *02 §8*
-- [ ] **T2.7** Integration tests: full round typed, full round spoken, reconnect mid-round, host reload, phone hitting `/host`. *RECON-1, RECON-5, CONN-3*
+- [x] **T2.1** Express + Socket.IO boot on `0.0.0.0`, LAN discovery, console join URL, open browser. *CONN-1, NFR-1*
+- [x] **T2.2** Handshake auth: host token (loopback-only issue) + loopback; player token hashing. *CONN-3, RECON-1*
+- [x] **T2.3** GameHost: dispatch, effects, timers with phase keys, coalesced broadcasts, cues. *LOBBY-1*
+- [x] **T2.4** Clock sync ping. 
+- [x] **T2.5** Persistence of settings and custom words; REST routes; QR SVG. *LOBBY-3, WORD-2, CONN-2*
+- [x] **T2.6** Rate limit + input hygiene. *02 §8*
+- [x] **T2.7** Integration tests: full round typed, full round spoken, reconnect mid-round, host reload, phone hitting `/host`. *RECON-1, RECON-5, CONN-3*
 
 **Done when:** a scripted 4-player game plays start to finish over real sockets in CI.
 
