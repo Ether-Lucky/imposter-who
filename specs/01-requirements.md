@@ -80,6 +80,8 @@ Product context lives in [PRODUCT.md](../PRODUCT.md). This file lists numbered, 
 
 **REQ-ROLE-2 (MUST) Private reveal.** Each controller SHALL show a face-down ticket. The player reveals it by dragging the tear strip, or by press-and-hold as an alternative. Civilians see the category and the word. The imposter sees "DESTINATION UNKNOWN", plus the category when *Show category to imposter* is on.
 
+- WHEN a player tears their ticket, THE SYSTEM SHALL keep the face up on that phone until the player hides it, even if the round has moved on (the last player to tear would otherwise skip the reveal). *(Found in M3 playtest.)*
+
 **REQ-ROLE-3 (MUST) Re-peek.** WHEN the player presses and holds the ticket at any later point in the round, THE SYSTEM SHALL show the secret again while they hold, and hide it on release.
 
 **REQ-ROLE-4 (MUST) Ready gate.** WHEN every connected player has torn their ticket, or the host presses Continue, THE SYSTEM SHALL move to the clue round. The host display shows who is ready (✓) but never what they saw.

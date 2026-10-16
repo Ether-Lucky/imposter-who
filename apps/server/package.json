@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts --dev",
     "start": "tsx src/index.ts --open",
+    "bots": "tsx scripts/bots.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

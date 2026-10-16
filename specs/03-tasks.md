@@ -47,9 +47,9 @@ The order is deliberate: **rules first, plumbing second, looks third**. The game
 
 Functional screens with plain styling, to prove the flow on real phones before investing in looks.
 
-- [ ] **T3.1** Net layer: socket client, zustand store, version check, reconnect with token. *RECON-1*
-- [ ] **T3.2** Host screens for every phase + settings + custom word editor. *LOBBY-2..4, WORD-2*
-- [ ] **T3.3** Controller screens for every phase, with role-identical layout. *ROLE-2, ROLE-3, CLUE-2, CLUE-3, VOTE-1, GUESS-1, GUESS-5, RES-2*
+- [x] **T3.1** Net layer: socket client, zustand store, version check, reconnect with token. *RECON-1*
+- [x] **T3.2** Host screens for every phase + settings + custom word editor. *LOBBY-2, LOBBY-3, WORD-2* (LOBBY-4 how-to-play explainer moved to T4.4, where it can be animated on the board.)
+- [x] **T3.3** Controller screens for every phase, with role-identical layout. *ROLE-2, ROLE-3, CLUE-2, CLUE-3, VOTE-1, GUESS-1, GUESS-5, RES-2*
 - [ ] **T3.4** Playtest on real phones on home Wi-Fi, including the Windows firewall prompt and a phone sleeping mid-round. Log issues back into 01 as spec changes.
 
 **Done when:** a real group plays 3 rounds with no blocker.
@@ -59,7 +59,7 @@ Functional screens with plain styling, to prove the flow on real phones before i
 - [ ] **T4.1** Font test: render flap cells in candidate faces; lock the flap face; subset and self-host. *04 §1.3, NFR-2*
 - [ ] **T4.2** Flap engine: drum walk, two-half flip, overshoot, cascade jitter, queue cap, pause on hidden, reduced-motion crossfade. Unit tests for step sequences. *04 §3, UX-2, UX-4*
 - [ ] **T4.3** Board grid layout system: viewport → cell size, everything snaps to cells. *04 §1.5*
-- [ ] **T4.4** Host screens rebuilt on the board (lobby, check-in, settings timetable, all phases). *04 §4, UX-1*
+- [ ] **T4.4** Host screens rebuilt on the board (lobby, check-in, settings timetable, all phases), plus the how-to-play explainer. *04 §4, UX-1, LOBBY-4*
 - [ ] **T4.5** Ticket component: paper, perforation, barcode, faces, stamps. *04 §1.4, §5*
 - [ ] **T4.6** Controller screens rebuilt as tickets. *04 §5, UX-5*
 

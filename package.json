@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "bots": "npm run bots -w @imposter-who/server --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
