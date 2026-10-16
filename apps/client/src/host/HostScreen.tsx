@@ -1,348 +1,495 @@
-/** The whole host display as a pure function of the view (one screen per phase). */
-import { useEffect, useState } from 'react';
+/**
+ * The host display: one departure board, a pure function of the view (04 §4). Rows 0 and
+ * 1 are the header and the headline, rows 2 to 16 hold up to 15 passengers, and row 17 is
+ * the host's row of signs.
+ */
+import { useEffect, useRef, useState } from 'react';
 import type { HostView } from '@imposter-who/core';
+import { BoardGrid, BoardItem, useBoard } from '../flap/BoardGrid.tsx';
+import { FlapMotion, FlapRow, type FlapTone } from '../flap/Flap.tsx';
 import { formatClock } from '../net/clock.ts';
 import { useCountdown } from '../net/useCountdown.ts';
-import { Button } from '../ui/Button.tsx';
-import { OUTCOME_LABEL, PHASE_LABEL, livesLabel, nameOf } from '../ui/labels.ts';
-import { Board } from './Board.tsx';
+import { OUTCOME_LABEL, nameOf } from '../ui/labels.ts';
+import { useReducedMotion } from '../ui/motion.ts';
+import { burstConfetti } from '../fx/confetti.ts';
+import { hostSfx } from './audio.ts';
 import { Lobby } from './Lobby.tsx';
+import { FIRST_ROW, FOOTER_ROW, Headline, MAX_ROWS, PassengerRows } from './rows.tsx';
+import {
+  MANHUNT_TICKER_LINES,
+  TICKER_LINES,
+  boardRows,
+  fitWords,
+  headline,
+  infoLine,
+} from './model.ts';
+import { beatAt, revealHeadline, revealPlan } from './revealTimeline.ts';
+import { SignRun, signRunWidth, type SignSpec } from './Sign.tsx';
 import type { HostScreenProps, Send } from './types.ts';
 
-/** Fallback pacing for the vote reveal until the M5 animation reports when it is done. */
-export const PLAIN_REVEAL_MS = 6000;
-
-function Header({ view, offset }: { view: HostView; offset: number }) {
-  const timed = view.phase !== 'voteReveal';
-  const seconds = useCountdown(timed ? view.deadline : null, view.pausedRemainingMs, offset);
-  const round = view.round;
-  return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-ink/10 px-6 py-4">
-      <div className="flex items-baseline gap-4">
-        <h1 className="text-3xl font-black tracking-tight uppercase">Imposter Who?</h1>
-        <p className="text-xl tracking-widest text-amber uppercase">{PHASE_LABEL[view.phase]}</p>
-      </div>
-      {round && (
-        <p className="text-lg tracking-wide uppercase">
-          {view.match ? `Manhunt round ${view.match.rounds}` : `Round ${round.number}`}
-          {view.match && (
-            <>
-              <span className="text-ink-dim"> · Lives: </span>
-              <span className={view.match.livesLeft === 1 ? 'text-red' : ''}>
-                {livesLabel(view.match)}
-              </span>
-            </>
-          )}
-          <span className="text-ink-dim"> · Line: </span>
-          {round.categoryName ?? 'Classified'}
-          {view.phase === 'clues' && round.laps > 1 && (
-            <span className="text-ink-dim">
-              {' '}
-              · Lap {round.lap} of {round.laps}
-            </span>
-          )}
-        </p>
-      )}
-      {seconds !== null && (
-        <p
-          aria-label="Time left"
-          className={`font-mono text-4xl tabular-nums ${seconds <= 5 ? 'text-amber' : ''}`}
-        >
-          {formatClock(seconds)}
-        </p>
-      )}
-    </header>
-  );
-}
+/** Server-side fallback for the vote reveal is 12 s; the board normally finishes first. */
+export const REVEAL_FALLBACK_MS = 12_000;
 
 function useAck(send: Send) {
   const [error, setError] = useState<string | null>(null);
   const act = async (event: string, payload?: unknown) => {
     const ack = await send(event, payload);
     setError(ack.ok ? null : ack.message);
+    return ack.ok;
   };
   return { error, act };
 }
 
-function Controls({ view, send }: { view: HostView; send: Send }) {
-  const { error, act } = useAck(send);
-  const active = view.phase !== 'lobby' && view.phase !== 'result';
-  const timed = view.deadline !== null || view.pausedRemainingMs !== null;
+function Clock({ view, offset }: { view: HostView; offset: number }) {
+  const timed = view.phase !== 'voteReveal' && view.phase !== 'result';
+  const seconds = useCountdown(timed ? view.deadline : null, view.pausedRemainingMs, offset);
+  if (seconds === null) return null;
+  const urgent = view.phase === 'discussion' ? seconds <= 15 : seconds <= 5;
   return (
-    <footer className="flex flex-wrap items-center gap-3 border-t border-ink/10 px-6 py-4">
-      {view.phase === 'reveal' && (
-        <Button tone="primary" onClick={() => act('phase:continue')}>
-          Start clues now
-        </Button>
-      )}
-      {view.phase === 'clues' && (
-        <Button onClick={() => act('phase:skip')}>
-          {view.settings.clueMode === 'spoken' ? 'Next passenger' : 'Skip turn'}
-        </Button>
-      )}
-      {view.phase === 'discussion' && (
-        <Button tone="primary" onClick={() => act('phase:skip')}>
-          Go to vote
-        </Button>
-      )}
-      {(view.phase === 'discussion' || view.phase === 'voting') && timed && (
-        <Button onClick={() => act('timer:add', { seconds: 30 })}>+30 s</Button>
-      )}
-      {view.phase === 'voting' && <Button onClick={() => act('phase:skip')}>Close voting</Button>}
-      {active && (
-        <Button onClick={() => act(view.paused ? 'game:resume' : 'game:pause')}>
-          {view.paused ? 'Resume' : 'Pause'}
-        </Button>
-      )}
-      {active && (
-        <Button
-          tone="danger"
-          className="ml-auto"
-          onClick={() => {
-            const what = view.match ? 'match' : 'round';
-            if (confirm(`End this ${what} with no result and go back to check-in?`)) {
-              void act('lobby:return');
-            }
-          }}
-        >
-          {view.match ? 'End match' : 'End round'}
-        </Button>
-      )}
-      {error && <p className="text-red">{error}</p>}
-    </footer>
+    <BoardItem col={-1} row={0} w={5}>
+      <span aria-label="Time left">
+        <FlapRow text={formatClock(seconds)} width={5} tone={urgent ? 'amber' : 'ink'} />
+      </span>
+    </BoardItem>
   );
 }
 
-function VoteReveal({ view, send }: { view: HostView; send: Send }) {
-  const ballot = view.round!.ballots.at(-1)!;
-  const version = view.round!.ballots.length;
+/** Row 0: what this round is, plus the clock. */
+function Header({ view, offset, text }: { view: HostView; offset: number; text: string }) {
+  const grid = useBoard();
+  return (
+    <>
+      <BoardItem col={0} row={0} w={grid.cols - 7}>
+        <FlapRow text={fitWords(text, grid.cols - 7)} width={grid.cols - 7} />
+      </BoardItem>
+      <Clock view={view} offset={offset} />
+    </>
+  );
+}
+
+/** Row 17, left of the signs: a line of flaps that fits whatever room is left. */
+function FooterText({ text, room, tone = 'dim' }: { text: string; room: number; tone?: FlapTone }) {
+  if (room < 6) return null;
+  return (
+    <BoardItem col={0} row={FOOTER_ROW} w={room}>
+      <FlapRow text={fitWords(text, room)} width={room} tone={tone} />
+    </BoardItem>
+  );
+}
+
+/** The platform ticker (04 §4.7): house lines in chunks that fit; quiet near the end. */
+function Ticker({ view, room, quiet }: { view: HostView; room: number; quiet: boolean }) {
+  const lines = view.match ? MANHUNT_TICKER_LINES : TICKER_LINES;
+  const chunks = lines.flatMap((line) => chunk(line, room));
+  const [i, setI] = useState(0);
+  const reduced = useReducedMotion();
   useEffect(() => {
-    const id = setTimeout(() => void send('reveal:done'), PLAIN_REVEAL_MS);
-    return () => clearTimeout(id);
-  }, [send, version]);
+    if (quiet || reduced) return;
+    const id = setInterval(() => setI((n) => n + 1), 3500);
+    return () => clearInterval(id);
+  }, [quiet, reduced]);
+  return <FooterText text={quiet ? '' : (chunks[i % chunks.length] ?? '')} room={room} />;
+}
 
-  let headline: string;
-  if (ballot.result === 'eject') headline = `${nameOf(view, ballot.ejectedId)} is off the train`;
-  else if (ballot.result === 'revote')
-    headline = `Tie. Revote between ${ballot.tied.map((id) => nameOf(view, id)).join(' and ')}`;
-  else if (ballot.result === 'doubleTie') headline = 'Tied again. Nobody leaves';
-  else if (ballot.result === 'noEject') headline = 'Tie. Nobody leaves the train';
-  else headline = 'Nobody voted';
+function chunk(line: string, width: number): string[] {
+  const out: string[] = [];
+  let cur = '';
+  for (const word of line.split(' ')) {
+    const next = cur ? `${cur} ${word}` : word;
+    if (next.length > width && cur) {
+      out.push(cur);
+      cur = word;
+    } else cur = next;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
 
+/** Last call suspense (04 §4.10): cells shuffle, never leaking anything. */
+function Shuffle({ room }: { room: number }) {
+  const reduced = useReducedMotion();
+  const w = Math.min(10, room);
+  const [text, setText] = useState('?'.repeat(w));
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => {
+      const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      setText(Array.from({ length: w }, () => abc[Math.floor(Math.random() * 26)]).join(''));
+    }, 260);
+    return () => clearInterval(id);
+  }, [reduced, w]);
+  if (room < 6) return null;
   return (
-    <div className="grid gap-6">
-      <h2 className="text-4xl font-black uppercase">{headline}</h2>
-      <Board view={view} showVotes />
-      <Button
-        tone="primary"
-        className="justify-self-start"
-        onClick={() => void send('reveal:done')}
-      >
-        Continue
-      </Button>
-    </div>
+    <BoardItem col={0} row={FOOTER_ROW} w={w}>
+      <FlapRow text={text} width={w} tone="amber" />
+    </BoardItem>
   );
 }
 
-/** REQ-MODE-6: between rounds of a Manhunt match. */
-function Intermission({ view, send }: { view: HostView; send: Send }) {
-  const { error, act } = useAck(send);
-  const ballot = view.round!.ballots.at(-1);
-  const match = view.match!;
-  const ejected = ballot?.result === 'eject' ? ballot.ejectedId : null;
-  return (
-    <div className="grid gap-6">
-      <div>
-        <h2 className="text-5xl font-black uppercase">
-          {ejected ? `${nameOf(view, ejected)} was not the imposter` : 'Nobody was voted out'}
-        </h2>
-        <p className="mt-2 text-2xl text-amber uppercase">
-          The imposter is still on board. Lives left: {livesLabel(match)}
-        </p>
-      </div>
-      <Board view={view} showVotes />
-      <div className="flex flex-wrap gap-3">
-        <Button tone="primary" className="min-h-14 px-8 text-xl" onClick={() => act('round:next')}>
-          Next round
-        </Button>
-      </div>
-      {error && <p className="text-red">{error}</p>}
-    </div>
-  );
+function useRevealClock(view: HostView, send: Send, reduced: boolean) {
+  const ballots = view.round?.ballots.length ?? 0;
+  const active = view.phase === 'voteReveal';
+  // Elapsed time for one ballot's reveal. A new ballot (a revote) starts again from 0.
+  const [clock, setClock] = useState({ ballots, t: 0 });
+  const t = clock.ballots === ballots ? clock.t : 0;
+  const skipped = useRef(-1);
+  const sent = useRef(-1);
+  const ballot = view.round?.ballots.at(-1);
+  const voters = view.round?.turnOrder.length ?? 0;
+  const plan = ballot ? revealPlan(voters, ballot.result, reduced) : null;
+
+  useEffect(() => {
+    if (!active) return;
+    const t0 = performance.now();
+    // 20 ticks a second is plenty: beats are hundreds of ms apart, and the flaps animate
+    // themselves between ticks.
+    const id = setInterval(
+      () =>
+        setClock({ ballots, t: skipped.current === ballots ? Infinity : performance.now() - t0 }),
+      50,
+    );
+    return () => clearInterval(id);
+  }, [active, ballots]);
+
+  const beat = plan ? beatAt(plan, voters, t) : null;
+  useEffect(() => {
+    if (active && beat?.done && sent.current !== ballots) {
+      sent.current = ballots;
+      void send('reveal:done');
+    }
+  }, [active, beat?.done, ballots, send]);
+
+  return {
+    beat,
+    ballot,
+    skip: () => {
+      skipped.current = ballots;
+      setClock({ ballots, t: Infinity });
+    },
+  };
 }
 
-function Result({ view, send }: { view: HostView; send: Send }) {
-  const { error, act } = useAck(send);
-  const round = view.round!;
-  const outcome = round.outcome!;
+function controlsFor(
+  view: HostView,
+  act: (e: string, p?: unknown) => Promise<boolean>,
+  skipReveal: () => void,
+): SignSpec[] {
+  const pause: SignSpec = {
+    label: view.paused ? 'RESUME' : 'PAUSE',
+    tone: view.paused ? 'amber' : 'plain',
+    onClick: () => void act(view.paused ? 'game:resume' : 'game:pause'),
+  };
+  const end: SignSpec = {
+    label: 'END',
+    tone: 'red',
+    title: view.match ? 'End match' : 'End round',
+    onClick: () => {
+      const what = view.match ? 'match' : 'round';
+      if (confirm(`End this ${what} with no result and go back to check-in?`))
+        void act('lobby:return');
+    },
+  };
+  const timed = view.deadline !== null || view.pausedRemainingMs !== null;
+  const more: SignSpec = {
+    label: '+30 S',
+    onClick: () => void act('timer:add', { seconds: 30 }),
+    title: 'Add 30 seconds',
+  };
+  switch (view.phase) {
+    case 'reveal':
+      return [
+        { label: 'START CLUES', tone: 'amber', onClick: () => void act('phase:continue') },
+        pause,
+        end,
+      ];
+    case 'clues':
+      return [
+        {
+          label: view.settings.clueMode === 'spoken' ? 'NEXT' : 'SKIP TURN',
+          onClick: () => void act('phase:skip'),
+          title: view.settings.clueMode === 'spoken' ? 'Next passenger' : 'Skip turn',
+        },
+        pause,
+        end,
+      ];
+    case 'discussion':
+      return [
+        {
+          label: 'VOTE NOW',
+          tone: 'amber',
+          onClick: () => void act('phase:skip'),
+          title: 'Go to vote',
+        },
+        ...(timed ? [more] : []),
+        pause,
+        end,
+      ];
+    case 'voting':
+      return [
+        {
+          label: 'CLOSE VOTE',
+          tone: 'amber',
+          onClick: () => void act('phase:skip'),
+          title: 'Close voting',
+        },
+        ...(timed ? [more] : []),
+        pause,
+        end,
+      ];
+    case 'voteReveal':
+      return [{ label: 'SKIP', onClick: skipReveal, title: 'Skip the reveal' }];
+    case 'lastChance':
+      return [pause, end];
+    case 'intermission':
+      return [
+        {
+          label: 'NEXT DEPARTURE',
+          tone: 'amber',
+          onClick: () => void act('round:next'),
+          title: 'Next round',
+        },
+        {
+          label: 'END MATCH',
+          tone: 'red',
+          onClick: () => {
+            if (confirm('End this match with no result and go back to check-in?'))
+              void act('lobby:return');
+          },
+        },
+      ];
+    case 'result':
+      return view.round?.overrideOpen
+        ? [
+            {
+              label: 'TABLE SAYS IT COUNTS',
+              tone: 'outline-amber',
+              onClick: () => void act('guess:override'),
+              title: 'Table says it counts',
+            },
+            { label: 'NEXT DEPARTURE', tone: 'amber', onClick: () => void act('round:next') },
+          ]
+        : [
+            {
+              label: 'NEXT DEPARTURE',
+              tone: 'amber',
+              onClick: () => void act('round:next'),
+              title: 'Next round',
+            },
+            {
+              label: 'CHECK-IN',
+              onClick: () => void act('lobby:return'),
+              title: 'Back to check-in',
+            },
+            { label: 'RESET', onClick: () => void act('scores:reset'), title: 'Reset scores' },
+          ];
+    default:
+      return [];
+  }
+}
+
+function resultHeadline(view: HostView): { text: string; tone: FlapTone } {
+  const outcome = view.round!.outcome!;
   const winner =
     outcome.winner === 'civilians'
-      ? 'Civilians win'
+      ? 'CIVILIANS WIN'
       : outcome.winner === 'imposter'
-        ? 'Imposter wins'
-        : 'No result';
-  const ranked = [...view.players].sort((a, b) => b.score - a.score);
+        ? 'IMPOSTER WINS'
+        : 'NO RESULT';
+  return {
+    text: `${winner}. ${OUTCOME_LABEL[outcome.reason].toUpperCase()}`,
+    tone: outcome.winner === 'none' ? 'dim' : 'amber',
+  };
+}
+
+function InRound({ view, offset, send }: HostScreenProps) {
+  const grid = useBoard();
+  const reduced = useReducedMotion();
+  const { error, act } = useAck(send);
+  const reveal = useRevealClock(view, send, reduced);
+  const round = view.round!;
+  const rows = boardRows(view);
+
+  // The verdict lands on the screen after the reveal, the first moment the board knows it.
+  if (view.phase === 'result' || view.phase === 'intermission') {
+    const ejected = round.ballots.at(-1)?.ejectedId;
+    for (const row of rows) {
+      if (row.id === ejected && round.imposterId !== row.id) {
+        row.status = 'CANCELLED';
+        row.tone = 'red';
+      }
+    }
+  }
+
+  let info = infoLine(view, grid.cols - 7);
+  let head: { text: string; tone: FlapTone } = { text: headline(view), tone: 'amber' };
+  if (view.phase === 'voteReveal' && reveal.beat?.announced && reveal.ballot) {
+    head = {
+      text: revealHeadline(reveal.ballot.result, {
+        ejected: reveal.ballot.ejectedId
+          ? nameOf(view, reveal.ballot.ejectedId).toUpperCase()
+          : null,
+        tied: reveal.ballot.tied.map((id) => nameOf(view, id).toUpperCase()),
+      }),
+      tone: 'amber',
+    };
+  }
+  if (view.phase === 'lastChance') {
+    head = {
+      text: `${nameOf(view, round.imposterId).toUpperCase()} DEPARTED. LAST CALL: NAME THE DESTINATION?`,
+      tone: 'amber',
+    };
+  }
+  if (view.phase === 'intermission') {
+    const ejected = round.ballots.at(-1)?.ejectedId;
+    head = ejected
+      ? { text: `${nameOf(view, ejected).toUpperCase()}: CANCELLED. NOT THE IMPOSTER`, tone: 'red' }
+      : { text: 'INTERMISSION. NOBODY LEFT THE TRAIN', tone: 'amber' };
+  }
+  if (view.phase === 'result') {
+    head = resultHeadline(view);
+    const parts = [`DESTINATION: ${(round.word?.word ?? '').toUpperCase()}`];
+    if (round.guess)
+      parts.push(`GUESS: ${round.guess.text.toUpperCase()} ${round.guess.correct ? 'OK' : 'X'}`);
+    info = fitWords(parts.join('  '), grid.cols - 7);
+  }
+
+  const votesShown = reveal.beat?.votesShown ?? 0;
+  useEffect(() => {
+    if (view.phase === 'voteReveal' && votesShown > 0) hostSfx('stamp');
+  }, [view.phase, votesShown]);
+
+  const controls = controlsFor(view, act, reveal.skip);
+  const room = grid.cols - signRunWidth(controls) - 2;
+
+  useConfetti(view, reduced);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-      <section className="grid content-start gap-6">
-        <div>
-          <p className="text-xl tracking-widest text-ink-dim uppercase">
-            {OUTCOME_LABEL[outcome.reason]}
-          </p>
-          <h2 className="text-6xl font-black uppercase">{winner}</h2>
-        </div>
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg bg-flap p-4">
-            <dt className="text-sm tracking-widest text-ink-dim uppercase">Destination</dt>
-            <dd className="text-3xl font-bold uppercase">{round.word?.word}</dd>
-          </div>
-          <div className="rounded-lg bg-flap p-4">
-            <dt className="text-sm tracking-widest text-ink-dim uppercase">Imposter</dt>
-            <dd className="text-3xl font-bold uppercase">{nameOf(view, round.imposterId)}</dd>
-          </div>
-          {round.guess && (
-            <div className="rounded-lg bg-flap p-4">
-              <dt className="text-sm tracking-widest text-ink-dim uppercase">Imposter guessed</dt>
-              <dd
-                className={`text-3xl font-bold uppercase ${round.guess.correct ? 'text-amber' : 'text-red'}`}
-              >
-                {round.guess.text}
-              </dd>
-            </div>
-          )}
-        </dl>
-        {view.round!.overrideOpen && (
-          <Button
-            tone="primary"
-            className="justify-self-start"
-            onClick={() => act('guess:override')}
-          >
-            Table says it counts
-          </Button>
-        )}
-        {round.turnOrder.length > 0 && round.ballots.length > 0 && <Board view={view} showVotes />}
-      </section>
-      <aside className="grid content-start gap-4">
-        <h3 className="text-xl font-bold uppercase">Scores</h3>
-        <ol className="grid gap-1">
-          {ranked.map((p) => (
-            <li key={p.id} className="flex justify-between rounded-md bg-flap px-3 py-2">
-              <span className="font-bold uppercase">{p.name}</span>
-              <span className="font-mono tabular-nums">{p.score}</span>
-            </li>
-          ))}
-        </ol>
-        <div className="grid gap-2">
-          <Button tone="primary" className="min-h-14 text-xl" onClick={() => act('round:next')}>
-            Next round
-          </Button>
-          <Button onClick={() => act('lobby:return')}>Back to check-in</Button>
-          <Button tone="ghost" onClick={() => act('scores:reset')}>
-            Reset scores
-          </Button>
-        </div>
-        {error && <p className="text-red">{error}</p>}
-      </aside>
-    </div>
+    <>
+      <Header view={view} offset={offset} text={info} />
+      <Headline
+        text={head.text}
+        tone={head.tone}
+        blink={view.phase === 'voting' ? `vote:${round.ballots.length}` : undefined}
+      />
+      {view.phase === 'clues' && round.lap > 1 && <LapSweep key={round.lap} />}
+      <PassengerRows
+        view={view}
+        rows={rows}
+        reveal={
+          view.phase === 'voteReveal' && reveal.beat && reveal.ballot
+            ? { beat: reveal.beat, ballot: reveal.ballot }
+            : undefined
+        }
+        score={view.phase === 'result'}
+      />
+      {view.phase === 'voteReveal' && (
+        <BoardItem col={0} row={FIRST_ROW} w={grid.cols} h={MAX_ROWS}>
+          <button
+            type="button"
+            aria-label="Skip the reveal"
+            className="absolute inset-0 cursor-pointer"
+            onClick={reveal.skip}
+          />
+        </BoardItem>
+      )}
+      {view.phase === 'discussion' && <TickerSlot view={view} offset={offset} room={room} />}
+      {view.phase === 'clues' && round.laps > 1 && (
+        <FooterText text={`LAP ${round.lap} OF ${round.laps}`} room={room} />
+      )}
+      {view.phase === 'lastChance' && <Shuffle room={room} />}
+      {error && <FooterText text={error} room={room} tone="red" />}
+      <SignRun row={FOOTER_ROW} signs={controls} />
+      {view.paused && <Paused view={view} />}
+    </>
   );
 }
 
-function Body({ view, send }: { view: HostView; send: Send }) {
-  const round = view.round;
-  switch (view.phase) {
-    case 'lobby':
-      return <Lobby view={view} send={send} />;
-    case 'reveal':
-      return (
-        <div className="grid gap-6">
-          <h2 className="text-4xl font-black uppercase">Check your ticket. Keep it secret.</h2>
-          <Board view={view} />
-        </div>
-      );
-    case 'clues': {
-      const name = nameOf(view, round!.currentPlayerId);
-      return (
-        <div className="grid gap-6">
-          <h2 className="text-4xl font-black uppercase">
-            Now boarding: <span className="text-amber">{name}</span>
-          </h2>
-          <p className="text-xl text-ink-dim">
-            {view.settings.clueMode === 'spoken'
-              ? `${name}, say one word out loud, then tap Done.`
-              : `${name}, type one word on your phone.`}
-          </p>
-          <Board view={view} />
-        </div>
-      );
-    }
-    case 'discussion':
-      return (
-        <div className="grid gap-6">
-          <h2 className="text-4xl font-black uppercase">Who is the imposter? Discuss.</h2>
-          <Board view={view} />
-        </div>
-      );
-    case 'voting':
-      return (
-        <div className="grid gap-6">
-          <h2 className="text-4xl font-black uppercase">
-            Final call. Vote on your phone.{' '}
-            <span className="text-ink-dim">
-              {round!.votedIds.length}/
-              {
-                round!.turnOrder.filter((id) => view.players.find((p) => p.id === id)?.connected)
-                  .length
-              }{' '}
-              voted
-            </span>
-          </h2>
-          {round!.revoteCandidates && (
-            <p className="text-xl text-amber">
-              Revote between {round!.revoteCandidates.map((id) => nameOf(view, id)).join(' and ')}
-            </p>
-          )}
-          <Board view={view} />
-        </div>
-      );
-    case 'voteReveal':
-      return <VoteReveal view={view} send={send} />;
-    case 'lastChance':
-      return (
-        <div className="grid gap-6">
-          <h2 className="text-5xl font-black uppercase">
-            {nameOf(view, round!.imposterId)} was the imposter.
-          </h2>
-          <p className="text-3xl text-amber uppercase">Last call: can they name the destination?</p>
-        </div>
-      );
-    case 'intermission':
-      return <Intermission view={view} send={send} />;
-    case 'result':
-      return <Result view={view} send={send} />;
-  }
+/** A thin amber sweep across the board when a new lap starts (04 §4.6). */
+function LapSweep() {
+  const grid = useBoard();
+  return (
+    <BoardItem
+      col={0}
+      row={FIRST_ROW}
+      w={grid.cols}
+      h={MAX_ROWS}
+      className="pointer-events-none overflow-hidden"
+    >
+      <span className="lap-sweep" aria-hidden />
+    </BoardItem>
+  );
+}
+
+function TickerSlot({ view, offset, room }: { view: HostView; offset: number; room: number }) {
+  const seconds = useCountdown(view.deadline, view.pausedRemainingMs, offset);
+  return <Ticker view={view} room={room} quiet={seconds !== null && seconds <= 15} />;
+}
+
+function Paused({ view }: { view: HostView }) {
+  const grid = useBoard();
+  const w = Math.min(grid.cols - 2, 30);
+  const col = Math.floor((grid.cols - w) / 2);
+  return (
+    <>
+      <BoardItem col={0} row={FIRST_ROW} w={grid.cols} h={MAX_ROWS}>
+        <div className="board-veil" />
+      </BoardItem>
+      <BoardItem col={col} row={8} w={w} className="z-5">
+        <FlapRow text="SERVICE PAUSED" width={w} tone="amber" />
+      </BoardItem>
+      {view.pausedReason === 'lowPlayers' && (
+        <BoardItem col={col} row={9} w={w} className="z-5">
+          <FlapRow text="WAITING FOR PASSENGERS" width={w} tone="dim" />
+        </BoardItem>
+      )}
+      <p className="sr-only">
+        Paused.{' '}
+        {view.pausedReason === 'lowPlayers'
+          ? 'Fewer than 3 passengers are connected. Wait for them, or end the round.'
+          : ''}
+      </p>
+    </>
+  );
+}
+
+/** Chad confetti on a win (04 §4.11). */
+function useConfetti(view: HostView, reduced: boolean) {
+  const outcome = view.phase === 'result' ? view.round?.outcome : null;
+  const key = outcome ? `${view.round!.number}:${outcome.reason}` : null;
+  const imposter = view.round?.imposterId ?? null;
+  useEffect(() => {
+    if (!key || reduced || !outcome || outcome.winner === 'none') return;
+    const id = setTimeout(() => {
+      if (outcome.winner === 'civilians') {
+        burstConfetti({ x: 0, y: innerHeight * 0.85, angle: -60, spread: 35, count: 90 });
+        burstConfetti({ x: innerWidth, y: innerHeight * 0.85, angle: -120, spread: 35, count: 90 });
+      } else {
+        const el = document.querySelector(`[data-row-id="${imposter}"] .board-item:nth-child(2)`);
+        const rect = el?.getBoundingClientRect();
+        burstConfetti({
+          x: rect ? rect.left + rect.width / 2 : innerWidth / 2,
+          y: rect ? rect.top : innerHeight / 2,
+          angle: -90,
+          spread: 25,
+          count: 120,
+        });
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [key, reduced, outcome, imposter]);
 }
 
 export function HostScreen({ view, offset, send }: HostScreenProps) {
   return (
-    <div className="grid min-h-[100dvh] grid-rows-[auto_1fr_auto]">
-      <Header view={view} offset={offset} />
-      <main className="relative mx-auto w-full max-w-[1400px] px-6 py-8">
-        <Body view={view} send={send} />
-        {view.paused && (
-          <div className="absolute inset-0 grid place-items-center bg-board/85">
-            <div className="text-center">
-              <p className="text-6xl font-black uppercase">Paused</p>
-              {view.pausedReason === 'lowPlayers' && (
-                <p className="mt-2 text-xl text-ink-dim">
-                  Fewer than 3 passengers are connected. Wait for them, or end the round.
-                </p>
-              )}
-            </div>
-          </div>
+    <FlapMotion.Provider value={{ reduced: view.settings.reducedMotion ? true : undefined }}>
+      <BoardGrid>
+        <h1 className="sr-only">Imposter Who?</h1>
+        {view.phase === 'lobby' ? (
+          <Lobby view={view} send={send} />
+        ) : (
+          <InRound view={view} offset={offset} send={send} />
         )}
-      </main>
-      {view.phase !== 'lobby' && <Controls view={view} send={send} />}
-    </div>
+      </BoardGrid>
+    </FlapMotion.Provider>
   );
 }

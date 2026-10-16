@@ -1,0 +1,234 @@
+/* Host board furniture: enamel signs, panels, the live bar (04 §1.4, §4). */
+/* In the components layer so Tailwind utilities on the same element still win. */
+@layer components {
+  .sign {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    border-radius: 3px;
+    font-family: var(--font-flap);
+    font-size: calc(var(--cell-h) * 0.6);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform 150ms var(--ease-out),
+      background-color 150ms var(--ease-out);
+  }
+
+  .sign:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .sign:focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+  }
+
+  .sign:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .sign-amber {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-amber);
+    color: var(--color-ticket-ink);
+  }
+
+  /* "Lights on" when the gate opens (04 §4.2): a clip-path wipe of light across the sign. */
+  .sign-amber:enabled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(255 255 255 / 0.35);
+    clip-path: inset(0 100% 0 0);
+    animation: sign-lights 600ms var(--ease-in-out) both;
+    pointer-events: none;
+  }
+
+  @keyframes sign-lights {
+    0% {
+      clip-path: inset(0 100% 0 0);
+    }
+    60% {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
+    100% {
+      clip-path: inset(0 0 0 0);
+      opacity: 0;
+    }
+  }
+
+  .sign-plain {
+    border: 1.5px solid rgb(242 242 238 / 0.35);
+    background: var(--color-board);
+    color: var(--color-ink);
+  }
+
+  .sign-red {
+    border: 1.5px solid var(--color-red);
+    background: var(--color-board);
+    color: var(--color-red);
+  }
+
+  .sign-outline-amber {
+    border: 2px solid var(--color-amber);
+    background: var(--color-board);
+    color: var(--color-amber);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sign-plain:hover:enabled,
+    .sign-red:hover:enabled,
+    .sign-outline-amber:hover:enabled {
+      background: rgb(242 242 238 / 0.08);
+    }
+  }
+
+  /* Small print set into the board (URLs, help text). */
+  .board-text {
+    font-size: calc(var(--cell-h) * 0.42);
+    line-height: 1.3;
+    color: var(--color-ink-dim);
+  }
+
+  /* A row of the board, dimmed or lifted as a whole. */
+  .board-row-dim {
+    opacity: 0.6;
+    transition: opacity 300ms var(--ease-out);
+  }
+
+  .board-row-fade {
+    opacity: 0.25;
+    transition: opacity 400ms var(--ease-out);
+  }
+
+  .board-row-lift {
+    transform: scale(1.04);
+    filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.6));
+    transition:
+      transform 700ms var(--ease-in-out),
+      filter 700ms var(--ease-in-out);
+  }
+
+  .live-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--cell-h) * -0.3);
+    width: calc(var(--cell-h) * 0.14);
+    border-radius: 2px;
+    background: var(--color-amber);
+  }
+
+  /* Panels that slide over the passenger rows (timetable, rules, help, pause). */
+  .board-panel {
+    position: relative;
+    z-index: 5;
+    overflow: auto;
+    border-radius: 4px;
+    background: var(--color-board);
+    box-shadow:
+      0 0 0 1px rgb(242 242 238 / 0.08),
+      0 -12px 40px rgb(0 0 0 / 0.5);
+    padding: calc(var(--cell-h) * 0.4);
+  }
+
+  .board-panel[data-state='closed'] {
+    visibility: hidden;
+    transform: translateY(105%);
+    transition:
+      transform 260ms var(--ease-drawer),
+      visibility 0s 260ms;
+  }
+
+  .board-panel[data-state='open'] {
+    transform: translateY(0);
+    transition: transform 400ms var(--ease-drawer);
+  }
+
+  .board-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    background: rgb(22 24 27 / 0.95);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .board-panel[data-state] {
+      transition: opacity 150ms linear;
+      transform: none;
+    }
+
+    .board-panel[data-state='closed'] {
+      opacity: 0;
+    }
+
+    .board-row-lift {
+      transform: none;
+    }
+
+    .sign-amber:enabled::after {
+      animation: none;
+    }
+  }
+
+  /* Final call: the headline blinks amber twice (opacity, not movement, 04 §4.8). */
+  .headline-blink {
+    animation: headline-blink 900ms steps(1, end) both;
+  }
+
+  @keyframes headline-blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    25%,
+    75% {
+      opacity: 0.25;
+    }
+  }
+
+  /* New lap: a thin amber line sweeps across the board (04 §4.6). */
+  .lap-sweep {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: calc(var(--cell-h) * 0.12);
+    background: var(--color-amber);
+    animation: lap-sweep 300ms var(--ease-in-out) both;
+  }
+
+  @keyframes lap-sweep {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(calc(100vw - var(--cell-h)));
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lap-sweep {
+      display: none;
+    }
+  }
+
+  /* Chad confetti canvas (04 §4.11). */
+  .confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+  }
+}

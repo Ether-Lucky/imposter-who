@@ -9,6 +9,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/big-shoulders-display": "^5.3.0",
     "@imposter-who/core": "*",
     "@phosphor-icons/react": "^2.1.10",
     "motion": "^14.3.0",

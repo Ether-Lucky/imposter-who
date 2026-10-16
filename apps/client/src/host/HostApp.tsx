@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { HostView } from '@imposter-who/core';
 import { createConnection, type Connection } from '../net/connection.ts';
 import { startHostSession, takeHostKey } from './api.ts';
+import { useHostAudio } from './audio.ts';
 import { HostScreen } from './HostScreen.tsx';
 
 let connection: Connection<HostView> | null = null;
@@ -28,12 +29,17 @@ function Connected({ conn }: { conn: Connection<HostView> }) {
   const view = conn.use((s) => s.view);
   const offset = conn.use((s) => s.offset);
   const status = conn.use((s) => s.status);
+  const cue = conn.use((s) => s.cue);
+  useHostAudio(view, cue);
   if (status === 'refused') return <NotTheLaptop />;
   if (!view) return <p className="p-6 text-ink-dim">Connecting to the game server…</p>;
   return (
     <>
       {status === 'offline' && (
-        <p role="status" className="bg-red px-6 py-2 text-center font-bold text-ink">
+        <p
+          role="status"
+          className="fixed inset-x-0 top-0 z-30 bg-red px-6 py-2 text-center font-bold text-ink"
+        >
           Lost the game server. Is it still running? Reconnecting…
         </p>
       )}

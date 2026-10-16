@@ -54,14 +54,14 @@ describe('host display renders every phase', () => {
     s.toVoting().voteOut(s.imposter).act({ type: 'reveal:done' });
     s.act({ type: 'guess:submit', playerId: s.imposter, text: 'cucumber' });
     const html = host(s);
-    expect(html).toContain('Civilians win');
-    expect(html).toContain('zucchini');
+    expect(html).toContain('CIVILIANS WIN');
+    expect(html.toLowerCase()).toContain('zucchini');
     expect(html).toContain('Table says it counts');
   });
 
   it('shows the category as Classified when hidden from the imposter', () => {
     const s = new Script({ showCategoryToImposter: false }).join(4).start();
-    expect(host(s)).toContain('Classified');
+    expect(host(s)).toContain('LINE: CLASSIFIED');
   });
 });
 
@@ -168,18 +168,21 @@ describe('Manhunt screens (REQ-MODE)', () => {
     const { s, victim } = toIntermission();
     expect(s.state.phase).toBe('intermission');
     const html = host(s);
-    expect(html).toContain(`Pax${victim.slice(1)} was not the imposter`);
-    expect(html).toContain('Lives left: <!-- -->1 of 2');
-    expect(html).toContain('Out');
-    expect(html).not.toContain('>Imposter<');
-    expect(html).toContain('End match');
+    expect(html).toContain(`PAX${victim.slice(1)}: CANCELLED. NOT THE IMPOSTER`);
+    expect(html).toContain('LIVES 1');
+    expect(html).toContain('sr-only">CANCELLED<');
+    expect(html).not.toContain('sr-only">IMPOSTER<');
+    expect(html).toContain('END MATCH');
   });
 
-  it('the voted-out phone becomes a ghost that sees the imposter', () => {
+  it('the voted-out phone becomes a ghost pass that can see the imposter (04 §5.9)', () => {
     const { s, victim } = toIntermission();
     const html = phone(s, victim);
     expect(html).toContain('off the train');
-    expect(html).toContain(`Pax${s.imposter.slice(1)}`);
+    expect(html).toContain('Ghost pass');
+    // Behind the same press-and-hold shutter as a ticket: nearby players can still glance.
+    expect(html).toContain('Hold to see the imposter');
+    expect(html).not.toContain(`>Pax${s.imposter.slice(1)}<`);
     expect(html).not.toContain('Hold to see your destination');
   });
 

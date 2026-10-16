@@ -255,3 +255,8 @@ The full spec is [04-ui-motion.md](04-ui-motion.md). Requirements here are the o
 | D12 | Multiple imposters / team modes | Later |
 | D14 | Manhunt mode: no imposter guesses; lives 1/2/3/Unlimited; new word each round; ties eject nobody and cost nothing; ghosts see the imposter | Decided |
 | D13 | Remote test runs use a Cloudflare quick tunnel (laptop stays the server). Vercel ruled out: serverless functions cannot hold the Socket.IO connections or in-memory game state | Decided |
+| D15 | Fonts: Big Shoulders Display 700 on flaps, Atkinson Hyperlegible 400/700 for UI and tickets, latin subset, bundled from @fontsource | Decided |
+| D16 | Sounds are synthesised at runtime (Web Audio), not files: no licences, no download weight, works offline | Decided |
+| D17 | The vote reveal ends on the accused row; DEPARTED or CANCELLED shows on the next screen, because the board only learns the imposter then (keeps REQ-SEC-3 and the server unchanged) | Decided |
+| D18 | Manhunt has no round cap: the host ends the match with END MATCH. The `?as=` profile switch stays (harmless, handy for testing several phones in one browser). Both open to the owner's veto | Decided (pending owner) |
+| D19 | Phone feedback toggle has three states: vibration only (default), vibration and sound, off | Decided |

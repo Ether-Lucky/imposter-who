@@ -58,29 +58,29 @@ Functional screens with plain styling, to prove the flow on real phones before i
 
 ## M4 · The Departure Board world
 
-- [ ] **T4.1** Font test: render flap cells in candidate faces; lock the flap face; subset and self-host. *04 §1.3, NFR-2*
-- [ ] **T4.2** Flap engine: drum walk, two-half flip, overshoot, cascade jitter, queue cap, pause on hidden, reduced-motion crossfade. Unit tests for step sequences. *04 §3, UX-2, UX-4*
-- [ ] **T4.3** Board grid layout system: viewport → cell size, everything snaps to cells. *04 §1.5*
-- [ ] **T4.4** Host screens rebuilt on the board (lobby, check-in, settings timetable, all phases), plus the how-to-play explainer. *04 §4, UX-1, LOBBY-4*
-- [ ] **T4.5** Ticket component: paper, perforation, barcode, faces, stamps. *04 §1.4, §5*
-- [ ] **T4.6** Controller screens rebuilt as tickets. *04 §5, UX-5*
+- [x] **T4.1** Font test: render flap cells in candidate faces; lock the flap face; subset and self-host. *04 §1.3, NFR-2*
+- [x] **T4.2** Flap engine: drum walk, two-half flip, overshoot, cascade jitter, queue cap, pause on hidden, reduced-motion crossfade. Unit tests for step sequences. *04 §3, UX-2, UX-4*
+- [x] **T4.3** Board grid layout system: viewport → cell size, everything snaps to cells. *04 §1.5*
+- [x] **T4.4** Host screens rebuilt on the board (lobby, check-in, settings timetable, all phases), plus the how-to-play explainer and the Manhunt board (lives, out rows, intermission). *04 §4, §4.12, UX-1, LOBBY-4, MODE-6*
+- [x] **T4.5** Ticket component: paper, perforation, barcode, faces, stamps. *04 §1.4, §5*
+- [x] **T4.6** Controller screens rebuilt as tickets, including Manhunt (ghost pass, standby, intermission). *04 §5, §5.9, UX-5, MODE-7, MODE-8*
 
 ## M5 · Motion choreography
 
-- [ ] **T5.1** Motion tokens (CSS vars + Motion presets) and the `:active` press rule everywhere. *04 §2*
-- [ ] **T5.2** Ticket print-in, tear-strip gesture (rubber band, velocity flick, perforation split, falling stub, flip), hold alternative. *04 §5.1, §5.3*
-- [ ] **T5.3** Peek shutter, NOW BOARDING stamp, clue print-out, hole-punch voting, hold-to-confirm guess. *04 §5.4 to §5.7*
-- [ ] **T5.4** Host: departure cascade, active-row `layoutId` bar, lap sweep, final-call cascade, ticker, attract loop. *04 §4.1 to §4.8*
-- [ ] **T5.5** Vote reveal timeline (skippable) and last-call suspense shuffle. *04 §4.9, §4.10*
-- [ ] **T5.6** Chad confetti (host + phone), arrivals board, score walk-up. *04 §4.11, §5.8*
-- [ ] **T5.7** Reduced-motion paths for every item above, plus the host "reduce motion" setting. *UX-2, 04 §8*
-- [ ] **T5.8** Verify animations never block input. *UX-3*
+- [x] **T5.1** Motion tokens (CSS vars + Motion presets) and the `:active` press rule everywhere. *04 §2*
+- [x] **T5.2** Ticket print-in, tear-strip gesture (rubber band, velocity flick, perforation split, falling stub, flip), hold alternative. *04 §5.1, §5.3*
+- [x] **T5.3** Peek shutter, NOW BOARDING stamp, clue print-out, hole-punch voting, hold-to-confirm guess. *04 §5.4 to §5.7*
+- [x] **T5.4** Host: departure cascade, active-row `layoutId` bar, lap sweep, final-call cascade, ticker, attract loop. *04 §4.1 to §4.8*
+- [x] **T5.5** Vote reveal timeline (skippable) and last-call suspense shuffle. *04 §4.9, §4.10*
+- [x] **T5.6** Chad confetti (host + phone), arrivals board, score walk-up. *04 §4.11, §5.8*
+- [x] **T5.7** Reduced-motion paths for every item above, plus the host "reduce motion" setting. *UX-2, 04 §8*
+- [x] **T5.8** Verify animations never block input. *UX-3*
 
 ## M6 · Sound and haptics
 
-- [ ] **T6.1** Source or synthesise sounds (licence noted per file); compress under 600 KB. *04 §7*
-- [ ] **T6.2** Host AudioDirector: unlock on first click, ambience, ducking, pooled flap ticks. *AUD-1*
-- [ ] **T6.3** Phone haptics + opt-in sounds with a per-phone toggle; identical patterns for every role. *AUD-2, AUD-3, SEC-2*
+- [x] **T6.1** Source or synthesise sounds (licence noted per file); compress under 600 KB. *04 §7* (All synthesised with Web Audio in `src/fx/synth.ts`: no files, nothing to license, 0 KB.)
+- [x] **T6.2** Host AudioDirector: unlock on first click, ambience, ducking, pooled flap ticks. *AUD-1*
+- [x] **T6.3** Phone haptics + opt-in sounds with a per-phone toggle; identical patterns for every role. *AUD-2, AUD-3, SEC-2*
 
 ## M7 · Hardening
 

@@ -1,147 +1,157 @@
-/** Check-in: QR to join, the passenger list, settings and Start (REQ-CONN-2, REQ-LOBBY-1..3). */
+/**
+ * Check-in on the board (04 §4.1 to §4.3): QR at left, passengers at right, the GATE sign
+ * bottom right. Panels (timetable, how to play, phone help) slide over the passenger rows.
+ */
 import { useEffect, useState } from 'react';
 import { ArrowDownIcon, ArrowUpIcon, XIcon } from '@phosphor-icons/react';
 import type { HostView } from '@imposter-who/core';
-import { Button } from '../ui/Button.tsx';
+import { BoardItem, useBoard } from '../flap/BoardGrid.tsx';
+import { FlapRow } from '../flap/Flap.tsx';
+import { useReducedMotion } from '../ui/motion.ts';
 import { getCategories, getJoinInfo, type CategoryList, type JoinInfo } from './api.ts';
 import { CategoryEditor } from './CategoryEditor.tsx';
-import { SettingsPanel } from './Settings.tsx';
+import { Help } from './Help.tsx';
+import { FIRST_ROW, FOOTER_ROW, Headline, MAX_ROWS, PassengerRows } from './rows.tsx';
+import { HowToPlay } from './HowToPlay.tsx';
+import { ATTRACT, boardRows, headline, type BoardRow } from './model.ts';
+import { Timetable } from './Settings.tsx';
+import { SignRun, SignRunLeft, type SignSpec } from './Sign.tsx';
 import type { Send } from './types.ts';
 
-export function JoinCard({
-  info,
-  onAddress,
-}: {
-  info: JoinInfo | null;
-  onAddress: (a: string) => void;
-}) {
-  if (!info) return <div className="aspect-square w-full animate-pulse rounded-lg bg-flap" />;
-  if (!info.url) {
-    return (
-      <div className="rounded-lg bg-flap p-4 text-ink-dim">
-        No Wi-Fi address found. Connect this laptop to the same Wi-Fi as the phones, then reload.
-      </div>
-    );
-  }
+type Panel = 'timetable' | 'rules' | 'help' | null;
+
+/** Passenger columns start right of the QR block. */
+const LIST_LEFT = 12;
+
+export function QrBlock({ info }: { info: JoinInfo | null }) {
   return (
-    <div className="grid gap-3">
-      <div
-        className="overflow-hidden rounded-lg bg-ink p-2 [&_svg]:h-auto [&_svg]:w-full"
-        // Server-generated SVG from the qrcode package; contains no user input.
-        dangerouslySetInnerHTML={{ __html: info.qrSvg ?? '' }}
-      />
-      <p className="font-mono text-lg break-all">{info.url}</p>
-      {info.mode === 'public' ? (
-        <p className="text-sm text-ink-dim">
-          Online game: anyone with this link can check in, from any network.
-        </p>
-      ) : (
-        <>
-          {info.addresses.length > 1 && (
-            <label className="grid gap-1 text-sm">
-              <span className="tracking-widest text-ink-dim uppercase">Network</span>
-              <select
-                value={info.preferred?.address}
-                onChange={(e) => onAddress(e.target.value)}
-                className="min-h-10 rounded-md bg-flap px-2"
-              >
-                {info.addresses.map((a) => (
-                  <option key={a.address} value={a.address}>
-                    {a.name}: {a.address}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <details className="text-sm text-ink-dim">
-            <summary className="cursor-pointer">Phones can't connect?</summary>
-            <ol className="mt-2 grid list-decimal gap-1 pl-5">
-              <li>Phones must be on the same Wi-Fi as this laptop, not mobile data.</li>
-              <li>
-                On Windows, allow Node.js on private networks when the firewall asks (or in Windows
-                Security, Firewall, Allow an app).
-              </li>
-              <li>
-                Guest Wi-Fi often blocks devices from seeing each other. Use the main network.
-              </li>
-              <li>If the laptop has several networks, pick the Wi-Fi one above.</li>
-            </ol>
-          </details>
-        </>
+    <>
+      <BoardItem col={0} row={FIRST_ROW} w={11} h={8}>
+        {info?.qrSvg ? (
+          <div
+            className="grid size-full place-items-center rounded-[3px] bg-ink p-[calc(var(--cell-h)*0.2)] [&_svg]:size-full"
+            aria-label="QR code to check in"
+            role="img"
+            // Server-generated SVG from the qrcode package; contains no user input.
+            dangerouslySetInnerHTML={{ __html: info.qrSvg }}
+          />
+        ) : (
+          <div className="grid size-full place-items-center rounded-[3px] bg-flap p-3 text-center board-text">
+            {info ? 'No Wi-Fi address found. Open HELP.' : 'Finding the address…'}
+          </div>
+        )}
+      </BoardItem>
+      {info?.url && (
+        <BoardItem col={0} row={FIRST_ROW + 8} w={11} h={2}>
+          <p className="board-text font-mono break-all text-ink">{info.url}</p>
+        </BoardItem>
       )}
-    </div>
+    </>
   );
 }
 
-export function Passengers({ view, send }: { view: HostView; send: Send }) {
-  const ids = view.players.map((p) => p.id);
-  const move = (index: number, by: number) => {
+/** Attract loop (04 §4.1): an empty row flaps a fake destination now and then. */
+function Attract({ taken }: { taken: number }) {
+  const reduced = useReducedMotion();
+  const [shown, setShown] = useState<{ row: number; text: string } | null>(null);
+  const idle = taken === 0 && !reduced;
+  useEffect(() => {
+    if (!idle) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const next = () => {
+      timer = setTimeout(
+        () => {
+          if (document.hidden) return next();
+          const row = Math.floor(Math.random() * MAX_ROWS);
+          const text = ATTRACT[Math.floor(Math.random() * ATTRACT.length)]!;
+          setShown({ row, text });
+          timer = setTimeout(() => {
+            setShown((s) => s && { ...s, text: '' });
+            next();
+          }, 2600);
+        },
+        6000 + Math.random() * 4000,
+      );
+    };
+    next();
+    return () => clearTimeout(timer);
+  }, [idle]);
+  if (!idle || !shown) return null;
+  return (
+    <BoardItem col={LIST_LEFT + 3} row={FIRST_ROW + shown.row} w={12}>
+      <FlapRow text={shown.text} width={12} tone="dim" />
+    </BoardItem>
+  );
+}
+
+/** The selected passenger's controls, set into their status cells. */
+function RowControls({
+  row,
+  index,
+  ids,
+  send,
+}: {
+  row: BoardRow;
+  index: number;
+  ids: string[];
+  send: Send;
+}) {
+  const move = (by: number) => {
     const order = [...ids];
     const [id] = order.splice(index, 1);
     order.splice(index + by, 0, id!);
     void send('seat:reorder', { order });
   };
-  if (view.players.length === 0) {
-    return (
-      <p className="rounded-lg bg-flap p-6 text-ink-dim">
-        No passengers yet. Scan the code to check in.
-      </p>
-    );
-  }
+  const btn =
+    'grid h-full place-items-center rounded-[3px] border-[1.5px] border-ink/35 text-ink disabled:opacity-30 active:scale-[0.97]';
   return (
-    <ol className="grid gap-1">
-      {view.players.map((p, i) => (
-        <li
-          key={p.id}
-          className={`flex items-center gap-3 rounded-md bg-flap px-3 py-2 ${p.connected ? '' : 'opacity-60'}`}
-        >
-          <span className="w-8 font-mono text-ink-dim tabular-nums">
-            {String(i + 1).padStart(2, '0')}
-          </span>
-          <span className="flex-1 text-lg font-bold uppercase">{p.name}</span>
-          <span className="text-sm tracking-wide text-ink-dim uppercase">
-            {p.connected ? 'Checked in' : 'Offline'}
-            {view.round && ` · ${p.score} pts`}
-          </span>
-          <button
-            type="button"
-            aria-label={`Move ${p.name} up`}
-            disabled={i === 0}
-            onClick={() => move(i, -1)}
-            className="grid size-9 place-items-center rounded-md bg-board disabled:opacity-30"
-          >
-            <ArrowUpIcon size={18} weight="bold" />
-          </button>
-          <button
-            type="button"
-            aria-label={`Move ${p.name} down`}
-            disabled={i === ids.length - 1}
-            onClick={() => move(i, 1)}
-            className="grid size-9 place-items-center rounded-md bg-board disabled:opacity-30"
-          >
-            <ArrowDownIcon size={18} weight="bold" />
-          </button>
-          <button
-            type="button"
-            aria-label={`Remove ${p.name}`}
-            onClick={() => {
-              if (confirm(`Remove ${p.name} from the board?`))
-                void send('player:remove', { id: p.id });
-            }}
-            className="grid size-9 place-items-center rounded-md bg-board text-red"
-          >
-            <XIcon size={18} weight="bold" />
-          </button>
-        </li>
-      ))}
-    </ol>
+    <div
+      className="grid h-full"
+      style={{
+        gridTemplateColumns: 'repeat(12, calc(var(--cell-h) * 0.68))',
+        columnGap: 'calc(var(--cell-h) * 0.08)',
+      }}
+    >
+      <button
+        type="button"
+        className={`${btn} col-span-3`}
+        disabled={index === 0}
+        aria-label={`Move ${row.name} up`}
+        onClick={() => move(-1)}
+      >
+        <ArrowUpIcon size="60%" weight="bold" />
+      </button>
+      <button
+        type="button"
+        className={`${btn} col-span-3`}
+        disabled={index === ids.length - 1}
+        aria-label={`Move ${row.name} down`}
+        onClick={() => move(1)}
+      >
+        <ArrowDownIcon size="60%" weight="bold" />
+      </button>
+      <button
+        type="button"
+        className={`${btn} col-span-6 border-red text-red`}
+        aria-label={`Remove ${row.name}`}
+        onClick={() => {
+          if (confirm(`Remove ${row.name} from the board?`))
+            void send('player:remove', { id: row.id });
+        }}
+      >
+        <XIcon size="55%" weight="bold" />
+      </button>
+    </div>
   );
 }
 
 export function Lobby({ view, send }: { view: HostView; send: Send }) {
+  const grid = useBoard();
   const [info, setInfo] = useState<JoinInfo | null>(null);
   const [categories, setCategories] = useState<CategoryList | null>(null);
   const [editing, setEditing] = useState(false);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadJoin = (address?: string) =>
@@ -152,50 +162,96 @@ export function Lobby({ view, send }: { view: HostView; send: Send }) {
     getCategories().then(setCategories, (e: Error) => setError(e.message));
   }, []);
 
+  const ids = view.players.map((p) => p.id);
+  const rows = boardRows(view).map((r) => {
+    const p = view.players.find((x) => x.id === r.id)!;
+    return view.round && p.connected ? { ...r, status: `${p.score} PTS` } : r;
+  });
   const connected = view.players.filter((p) => p.connected).length;
   const start = async () => {
-    const ack = await send(view.phase === 'result' ? 'round:next' : 'round:start');
+    const ack = await send('round:start');
     setError(ack.ok ? null : ack.message);
   };
 
+  const toggle = (p: Exclude<Panel, null>) => setPanel((cur) => (cur === p ? null : p));
+  const left: SignSpec[] = [
+    {
+      label: 'TIMETABLE',
+      onClick: () => toggle('timetable'),
+      title: 'Timetable (settings)',
+      tone: panel === 'timetable' ? 'outline-amber' : 'plain',
+    },
+    {
+      label: 'RULES',
+      onClick: () => toggle('rules'),
+      title: 'How to play',
+      tone: panel === 'rules' ? 'outline-amber' : 'plain',
+    },
+    {
+      label: 'HELP',
+      onClick: () => toggle('help'),
+      title: "Phones can't connect?",
+      tone: panel === 'help' ? 'outline-amber' : 'plain',
+    },
+  ];
+  const gate: SignSpec = {
+    label: connected < 3 ? `NEED ${3 - connected} MORE` : 'START',
+    tone: 'amber',
+    disabled: connected < 3,
+    onClick: () => void start(),
+    title: connected < 3 ? `Need ${3 - connected} more passengers` : 'Start round',
+  };
+  const modeText = view.settings.mode === 'manhunt' ? 'MANHUNT' : 'CLASSIC';
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(240px,320px)_1fr]">
-      <aside className="grid content-start gap-4">
-        <h2 className="text-2xl font-bold uppercase">Check in here</h2>
-        <JoinCard info={info} onAddress={(a) => void loadJoin(a)} />
-      </aside>
+    <>
+      <BoardItem col={0} row={0} w={13}>
+        <FlapRow text="IMPOSTER WHO?" width={13} />
+      </BoardItem>
+      <BoardItem col={-1} row={0} w={7}>
+        <FlapRow text={modeText} width={7} tone="dim" />
+      </BoardItem>
+      <Headline
+        text={error ? error.toUpperCase() : headline(view)}
+        tone={error ? 'red' : 'amber'}
+      />
+      <QrBlock info={info} />
+      <PassengerRows
+        view={view}
+        rows={rows}
+        left={LIST_LEFT}
+        clue={false}
+        selected={selected}
+        onRowClick={(row) => setSelected((s) => (s === row.id ? null : row.id))}
+        renderStatus={(row, r) =>
+          row.id === selected ? (
+            <RowControls row={row} index={r - FIRST_ROW} ids={ids} send={send} />
+          ) : undefined
+        }
+      />
+      <Attract taken={view.players.length} />
+      <SignRunLeft row={FOOTER_ROW} signs={left} />
+      <SignRun row={FOOTER_ROW} signs={[gate]} />
 
-      <section className="grid content-start gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-2xl font-bold uppercase">
-            Passengers <span className="text-ink-dim">{view.players.length}/15</span>
-          </h2>
-          <Button
-            tone="primary"
-            className="min-h-14 px-8 text-xl"
-            disabled={connected < 3}
-            onClick={start}
-          >
-            {connected < 3 ? `Need ${3 - connected} more` : 'Start round'}
-          </Button>
-        </div>
-        {error && <p className="text-red">{error}</p>}
-        <Passengers view={view} send={send} />
-        <details className="rounded-lg bg-flap/40 p-4" open>
-          <summary className="cursor-pointer text-xl font-bold uppercase">
-            Timetable (settings)
-          </summary>
-          <div className="mt-4">
-            <SettingsPanel
-              settings={view.settings}
-              categories={categories}
-              send={send}
-              onEditCustom={() => setEditing(true)}
-            />
-          </div>
-        </details>
-      </section>
-
+      <BoardItem
+        col={0}
+        row={FIRST_ROW}
+        w={grid.cols}
+        h={MAX_ROWS}
+        className="pointer-events-none overflow-hidden"
+      >
+        <Timetable
+          open={panel === 'timetable'}
+          settings={view.settings}
+          categories={categories}
+          send={send}
+          onEditCustom={() => setEditing(true)}
+        />
+      </BoardItem>
+      {panel === 'rules' && <HowToPlay mode={view.settings.mode} onClose={() => setPanel(null)} />}
+      {panel === 'help' && (
+        <Help info={info} onAddress={(a) => void loadJoin(a)} onClose={() => setPanel(null)} />
+      )}
       {editing && categories && (
         <CategoryEditor
           categories={categories}
@@ -203,6 +259,6 @@ export function Lobby({ view, send }: { view: HostView; send: Send }) {
           onClose={() => setEditing(false)}
         />
       )}
-    </div>
+    </>
   );
 }

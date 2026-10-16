@@ -1,0 +1,153 @@
+/* Split-flap cell (04 §1.4, §3). Size comes from --cell-h, set by the board grid (T4.3). */
+.flap {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: calc(var(--cell-h, 36px) * 0.68);
+  height: var(--cell-h, 36px);
+  font-family: var(--font-flap);
+  font-size: calc(var(--cell-h, 36px) * 0.78);
+  font-weight: 700;
+  color: var(--color-ink);
+  perspective: calc(var(--cell-h, 36px) * 6);
+  contain: layout paint;
+}
+
+.flap[data-tone='amber'] {
+  color: var(--color-amber);
+}
+
+.flap[data-tone='red'] {
+  color: var(--color-red);
+}
+
+.flap[data-tone='dim'] {
+  color: var(--color-ink-dim);
+}
+
+/* The seam between the halves. */
+.flap::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - 0.5px);
+  height: 1px;
+  background: var(--color-flap-seam);
+  z-index: 3;
+}
+
+.flap-half {
+  position: absolute;
+  inset-inline: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--color-flap);
+}
+
+.flap-top {
+  top: 0;
+  border-radius: 3px 3px 0 0;
+  transform-origin: 50% 100%;
+  background: linear-gradient(rgb(255 255 255 / 0.045), rgb(255 255 255 / 0)), var(--color-flap);
+}
+
+.flap-bottom {
+  bottom: 0;
+  border-radius: 0 0 3px 3px;
+  transform-origin: 50% 0;
+}
+
+.flap-glyph {
+  position: absolute;
+  inset-inline: 0;
+  height: var(--cell-h, 36px);
+  line-height: var(--cell-h, 36px);
+  text-align: center;
+  white-space: pre;
+}
+
+.flap-top .flap-glyph {
+  top: 0;
+}
+
+.flap-bottom .flap-glyph {
+  bottom: 0;
+}
+
+/* The moving leaves only exist on screen mid-flip. */
+.flap-leaf {
+  visibility: hidden;
+  backface-visibility: hidden;
+  z-index: 2;
+}
+
+.flap-leaf[data-on] {
+  visibility: visible;
+  will-change: transform;
+}
+
+.flap-shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+}
+
+.flap-row {
+  display: inline-flex;
+  gap: calc(var(--cell-h, 36px) * 0.08);
+}
+
+/* The board (04 §1.5). Sizes come from BoardGrid; the grid maths lives in grid.ts. */
+.board {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-board);
+}
+
+/* Fixed grain over the enamel (04 §1.4): one static layer, never on a moving element. */
+.board::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 10;
+}
+
+.board-layer {
+  position: absolute;
+  left: var(--board-left);
+  top: var(--board-top);
+  display: grid;
+  grid-template-columns: repeat(var(--board-cols), calc(var(--cell-h) * 0.68));
+  grid-template-rows: repeat(var(--board-rows), var(--cell-h));
+  column-gap: calc(var(--cell-h) * 0.08);
+  row-gap: calc(var(--cell-h) * 0.14);
+}
+
+.board-blank {
+  position: relative;
+  border-radius: 3px;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.03), rgb(255 255 255 / 0)) top / 100% 50% no-repeat,
+    var(--color-flap);
+  opacity: 0.55;
+}
+
+.board-blank::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - 0.5px);
+  height: 1px;
+  background: var(--color-flap-seam);
+}
+
+.board-item {
+  position: relative;
+  min-width: 0;
+}

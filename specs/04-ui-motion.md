@@ -48,8 +48,9 @@ The phone background is `--board`; the ticket is the only light object on it. Co
 
 ### 1.3 Type
 
-- **Flap face:** a condensed, tabular, all-caps station grotesk, self-hosted (REQ-NFR-2). First candidate: *Big Shoulders Display* (OFL, Chicago wayfinding origins). Confirm with a rendered flap test in M4 before locking.
-- **Ticket and UI text:** *Atkinson Hyperlegible* (OFL), chosen for mixed-age legibility on phones.
+- **Flap face:** a condensed, tabular, all-caps station grotesk, self-hosted (REQ-NFR-2). **Locked in T4.1: *Big Shoulders Display* 700** (OFL, Chicago wayfinding origins). It beat Barlow Condensed and Oswald in a rendered flap-cell test: it fills a tall cell, keeps letters distinct at 28px, and reads most like a station board.
+- **Ticket and UI text:** *Atkinson Hyperlegible* 400 and 700 (OFL), chosen for mixed-age legibility on phones.
+- Both come from `@fontsource` packages, latin subset only, imported in `apps/client/src/styles/fonts.ts` and bundled by Vite (about 49 KB of woff2).
 - **Ticket numbers:** tabular figures, dot-matrix styling via CSS (no image fonts).
 - No Inter, no serif, no emoji as icons. Icons: Phosphor, one stroke weight.
 
@@ -62,7 +63,14 @@ The phone background is `--board`; the ticket is the only light object on it. Co
 
 ### 1.5 The grid
 
-The host display is one grid of flap cells sized to the viewport: about 32 columns by 18 rows at 1920×1080, scaled so a cell is never smaller than 28px tall at 1366×768. **Everything snaps to cells**: rows, the QR block, timers, buttons. Nothing floats (raise from the oscilloscope challenger).
+The host display is one grid of flap cells sized to the viewport. **Everything snaps to cells**: rows, the QR block, timers, buttons. Nothing floats.
+
+- **Cells are flap-shaped:** width 0.68 × height, like a real split-flap character. The column gap is 0.08 × height (the same gap `FlapRow` uses, so text lines up with columns). The row gap is 0.14 × height.
+- **18 rows** always. The cell height is the largest whole pixel that fits 18 rows plus a half-cell margin top and bottom.
+- **Columns** fill the width (with a half-cell margin each side): about 49 at 16:9. If that leaves fewer than **40 columns** (a squarer screen), cells shrink until 40 fit. Layouts are designed for 40 columns and may anchor to the right edge.
+- Result: 1366×768 gives 35px cells and 50 columns; 1920×1080 gives 50px cells and 49 columns; 1024×768 gives 32px cells and 40 columns. A cell is never under 28px tall at 1366×768.
+- Empty cells show as blank flaps, so the whole screen reads as one board. A fixed grain overlay sits on top (§1.4).
+- Built in T4.3: `apps/client/src/flap/grid.ts` (pure maths, tested) and `BoardGrid.tsx` (`<BoardGrid>` with `<BoardItem col row w h>`; a negative `col` or `row` counts from the right or bottom edge).
 
 ### 1.6 Copy voice
 
@@ -119,11 +127,13 @@ The flap board is the product's signature. It must feel mechanical and real.
 
 **Sound:** each settled cell fires a tick from a pooled Web Audio buffer, rate-limited to 60 ticks/s and pitch-jittered ±6%, so a full-board cascade sounds like a real clatter, not a buzz.
 
-**Budget:** at most 320 cells mid-flip at once; extra changes queue. Animated elements get `will-change: transform` only while flipping. The engine pauses when `document.hidden`.
+**Budget:** at most 320 cells mid-flip at once; extra changes queue. Animated elements get `will-change: transform` only while flipping. While `document.hidden`, cells settle straight to their final text and queued flips are dropped (nobody is watching, and the board is correct when the tab returns).
+
+**Timing:** each step is pinned to a planned time on the document timeline, so frame-boundary delays do not add up over a long walk. Measured in T4.2: a full-board change with 40-step walks settles in about 2.2 s.
 
 **Reduced motion:** a cell crossfades A → B in 120 ms; ticks are reduced to one per row.
 
-**API sketch:** `<FlapRow text="MARCO" width={12} tone="amber" />` and `<FlapText>` for single strings. The engine diffs the strings and animates only the cells that changed.
+**API (built in T4.2, `apps/client/src/flap/`):** `<FlapRow text="MARCO" width={12} row={2} tone="amber" />`; without `width`, the row is as wide as its text. The engine diffs per cell and animates only the cells that changed. `<FlapMotion.Provider value={{ reduced: true }}>` forces reduced motion (the host setting, REQ-UX-2). `drum.ts` holds the pure logic; `Flap.tsx` the WAAPI cell.
 
 ---
 
@@ -150,7 +160,7 @@ Each screen below lists its **job**, its **layout** (in grid cells), and its **m
 - Header flaps to `ROUND 3   LINE: FOOD`. The category appears on the board only when *Show category to imposter* is on; otherwise the header reads `ROUND 3   LINE: CLASSIFIED`, since the board is public (REQ-SEC-3).
 
 ### 4.5 Ticket check (reveal phase)
-- Each row's status shows `TICKET ISSUED`, then flaps to `✓ READY` (icon plus word) as players tear their ticket. No hint of content.
+- Each row's status shows `ISSUED`, then flaps to `READY` as players tear their ticket. No hint of content. (The status column is 12 cells, so `TICKET ISSUED` became `ISSUED`.)
 
 ### 4.6 Clue round
 - **Active row:** amber left bar slides to the row (Motion `layoutId`, 350 ms `--ease-in-out`), the status flaps to `NOW BOARDING`, and a turn chime plays.
@@ -196,6 +206,24 @@ Tie: the tied rows stay lit, and the header flaps `TIE. REVOTE BETWEEN 2 PASSENG
 
 ---
 
+### 4.12 Manhunt on the board (REQ-MODE)
+
+Manhunt reuses 4.1 to 4.11. These are the differences.
+
+- **Header:** a lives block sits at the right end of the header row: `LIVES 2`, the count in flap digits. Unlimited reads `LIVES: NO LIMIT`. When one life is left, the count turns amber (the word stays, so state is not colour alone, REQ-UX-6). The match round counter reads `ROUND 3 OF MATCH`.
+- **Out rows:** a passenger who is out keeps their row, moved below the live passengers (Motion `layout`, 600 ms `--ease-in-out`, at the start of the next round). Their status column reads `CANCELLED` in red, the rest of the row dims to 60%, and the clue and vote columns flap to blank. They never light up as `NOW BOARDING` or `FINAL CALL`.
+- **Vote reveal (4.9):** the same beats, with these endings:
+  - Imposter ejected: `DEPARTED` in amber, then the match goes to Arrivals (4.11). No last call (REQ-MODE-2), so 4.10 never runs.
+  - Civilian ejected: `CANCELLED` with the glitch, then the lives count walks down one step on the drum (`2` to `1`) with a heavy stamp sound, 400 ms after the status settles.
+  - Tie or no votes: the tied rows dim back, and the header flaps `TIE. NOBODY LEAVES THE TRAIN`. No revote and no life lost.
+- **Intermission (REQ-MODE-6):** a whole-board cascade to an intermission layout:
+  - Header: `INTERMISSION`.
+  - Centre rows: `MARCO: CANCELLED` then `NOT THE IMPOSTER`, or `NOBODY LEFT THE TRAIN`.
+  - Below: `LIVES LEFT 1` and `PASSENGERS ON BOARD 5`.
+  - The GATE sign reads `NEXT DEPARTURE` (amber, the host's primary action). Beside it, an outlined `END SERVICE` sign ends the match.
+  - The platform ticker (4.7) runs with Manhunt house lines (`THE IMPOSTER REMAINS ON BOARD`).
+- **Match end:** Arrivals (4.11) with the header `IMPOSTER CAUGHT` or `IMPOSTER ESCAPED`, plus a summary row: rounds played and lives left. Every out passenger's row keeps its red `CANCELLED`.
+
 ## 5. Controller (phone) choreography
 
 The phone is one ticket on a dark ground. Same layout for every role (REQ-GUESS-5).
@@ -238,6 +266,14 @@ The phone is one ticket on a dark ground. Same layout for every role (REQ-GUESS-
 - Both show the true destination.
 
 ---
+
+### 5.9 Manhunt tickets (REQ-MODE)
+
+- **No guess link:** in Manhunt the peeked face never shows `GUESS DESTINATION`. Both roles show the `REMEMBER: ONE WORD CLUES` line in that slot, so layouts still match (REQ-MODE-2, REQ-GUESS-5).
+- **Lives:** the ticket's footer line reads `LIVES 2`, the same for every role.
+- **Intermission:** the ticket flips to an `INTERMISSION` face with the result line (`MARCO: CANCELLED` or `NOBODY LEFT THE TRAIN`), the lives left, and `NEXT DEPARTURE SOON`. On the next round, a new ticket prints (5.1 printer feed, shortened to 1 step) and arrives face down for a new tear (5.3).
+- **Ghost pass (REQ-MODE-7):** when a player is voted out, their ticket gets a red `CANCELLED` stamp (5.5 stamp motion), then tears in half diagonally (two clip-path halves drift apart 8px and rotate ±3deg). It becomes a **ghost pass**: a ticket with a dashed outline and `GHOST PASS` at the top. The secrets (`IMPOSTER: NAME` and `DESTINATION: WORD`) sit behind the same press-and-hold shutter as 5.4, because people nearby can still glance at the phone. The ghost pass updates to the new word each round. Ghosts get no turn, vote or haptic cues.
+- **Standby (REQ-MODE-8):** a player who joins mid-match gets a ticket stamped `STANDBY` with `BOARDING AFTER THIS SERVICE`. It stays static (no breathing shimmer) and prints a normal ticket when the match ends.
 
 ## 6. Phase transitions
 
