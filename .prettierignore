@@ -1,6 +1,6 @@
 dist
 node_modules
-.*/
 specs
 package-lock.json
 data
+.*/
