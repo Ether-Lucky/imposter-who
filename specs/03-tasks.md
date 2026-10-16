@@ -52,6 +52,8 @@ Functional screens with plain styling, to prove the flow on real phones before i
 - [x] **T3.3** Controller screens for every phase, with role-identical layout. *ROLE-2, ROLE-3, CLUE-2, CLUE-3, VOTE-1, GUESS-1, GUESS-5, RES-2*
 - [ ] **T3.4** Playtest on real phones on home Wi-Fi, including the Windows firewall prompt and a phone sleeping mid-round. Log issues back into 01 as spec changes.
 
+- [x] **T3.5** Manhunt mode: engine (match, lives, intermission, no guesses), views (match summary, ghost), host and phone screens, tests. *MODE-1..9*
+
 **Done when:** a real group plays 3 rounds with no blocker.
 
 ## M4 · The Departure Board world

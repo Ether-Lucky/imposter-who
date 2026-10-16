@@ -10,6 +10,7 @@ type Tone = 'live' | 'dim' | 'bad' | 'normal';
 function statusFor(view: HostView, id: string): { text: string; tone: Tone } {
   const round = view.round!;
   const player = view.players.find((p) => p.id === id);
+  if (view.match?.out.includes(id)) return { text: 'Out', tone: 'bad' };
   if (player && !player.connected) return { text: 'Offline', tone: 'dim' };
   switch (view.phase) {
     case 'reveal':
@@ -76,6 +77,11 @@ export function Board({ view, showVotes = false }: { view: HostView; showVotes?:
                     Imposter
                   </span>
                 )}
+                {view.match?.out.includes(id) && (
+                  <span className="ml-2 rounded-sm border border-red px-1.5 text-xs text-red">
+                    Out
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2 uppercase">
                 {clues.length === 0 && <span className="text-ink-dim">-</span>}
@@ -112,6 +118,22 @@ export function Board({ view, showVotes = false }: { view: HostView; showVotes?:
           );
         })}
       </tbody>
+      {view.match && view.match.out.some((id) => !round.turnOrder.includes(id)) && (
+        <tfoot>
+          <tr>
+            <td
+              colSpan={showVotes ? 5 : 4}
+              className="px-3 pt-3 text-sm tracking-widest text-ink-dim uppercase"
+            >
+              Off the train:{' '}
+              {view.match.out
+                .filter((id) => !round.turnOrder.includes(id))
+                .map((id) => nameOf(view, id))
+                .join(', ')}
+            </td>
+          </tr>
+        </tfoot>
+      )}
     </table>
   );
 }

@@ -111,6 +111,7 @@ export type Cue =
   | { cue: 'voteCast'; playerId: string }
   | { cue: 'voteReveal' }
   | { cue: 'lastCall' }
+  | { cue: 'intermission' }
   | { cue: 'result' }
   | { cue: 'paused' }
   | { cue: 'resumed' };

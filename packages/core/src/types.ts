@@ -1,7 +1,16 @@
 /** Core game types. Source: specs/02-design.md §4.1. */
 
 export type Phase =
-  'lobby' | 'reveal' | 'clues' | 'discussion' | 'voting' | 'voteReveal' | 'lastChance' | 'result';
+  | 'lobby'
+  | 'reveal'
+  | 'clues'
+  | 'discussion'
+  | 'voting'
+  | 'voteReveal'
+  | 'lastChance'
+  /** Manhunt only: between rounds of a match (REQ-MODE-6). */
+  | 'intermission'
+  | 'result';
 
 /** Phases where a round exists and is still being played. */
 export const ACTIVE_PHASES: readonly Phase[] = [
@@ -11,11 +20,18 @@ export const ACTIVE_PHASES: readonly Phase[] = [
   'voting',
   'voteReveal',
   'lastChance',
+  'intermission',
 ];
 
 export type ClueMode = 'typed' | 'spoken';
 
+/** Classic: one vote, the imposter may guess. Manhunt: lives, no guessing (REQ-MODE). */
+export type GameMode = 'classic' | 'manhunt';
+
 export interface Settings {
+  mode: GameMode;
+  /** Manhunt lives; 0 means Unlimited (play until 2 remain). */
+  lives: 0 | 1 | 2 | 3;
   clueMode: ClueMode;
   laps: 1 | 2 | 3;
   /** 0 means off. */
@@ -67,7 +83,8 @@ export interface Clue {
   status: ClueStatus;
 }
 
-export type RevealResult = 'eject' | 'revote' | 'doubleTie' | 'noVotes';
+/** 'noEject' is a Manhunt tie: nobody out, no life lost (REQ-MODE-4). */
+export type RevealResult = 'eject' | 'revote' | 'doubleTie' | 'noVotes' | 'noEject';
 
 export interface VoteRecord {
   votes: Record<string, string>;
@@ -89,7 +106,11 @@ export type OutcomeReason =
   | 'lastChanceRight'
   | 'lastChanceWrong'
   | 'imposterLeft'
-  | 'aborted';
+  | 'aborted'
+  /** Manhunt (REQ-MODE-4/5). */
+  | 'imposterCaught'
+  | 'outOfLives'
+  | 'lastTwo';
 
 export interface Outcome {
   winner: 'civilians' | 'imposter' | 'none';
@@ -134,12 +155,27 @@ export interface TimerSlot {
   seq: number;
 }
 
+/** A Manhunt match: several rounds with the same imposter (REQ-MODE-3). */
+export interface Match {
+  /** Server-only until the result. */
+  imposterId: string;
+  lives: 0 | 1 | 2 | 3;
+  /** Null when lives are Unlimited. */
+  livesLeft: number | null;
+  /** Civilians voted out, in order. */
+  out: string[];
+  rounds: number;
+  over: boolean;
+}
+
 export interface GameState {
   version: number;
   phase: Phase;
   players: Player[];
   settings: Settings;
   round: Round | null;
+  /** Manhunt only. Kept after the match ends so the result can show it. */
+  match: Match | null;
   roundCount: number;
   timers: Partial<Record<TimerKey, TimerSlot>>;
   /** Remaining ms per timer while paused. */

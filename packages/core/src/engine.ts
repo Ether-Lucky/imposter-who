@@ -43,6 +43,8 @@ export const TIMINGS = {
 } as const;
 
 export const DEFAULT_SETTINGS: Settings = {
+  mode: 'classic',
+  lives: 2,
   clueMode: 'typed',
   laps: 1,
   clueSeconds: 30,
@@ -57,6 +59,8 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 const SETTING_RULES: { [K in keyof Settings]: (v: unknown) => boolean } = {
+  mode: (v) => v === 'classic' || v === 'manhunt',
+  lives: (v) => v === 0 || v === 1 || v === 2 || v === 3,
   clueMode: (v) => v === 'typed' || v === 'spoken',
   laps: (v) => v === 1 || v === 2 || v === 3,
   clueSeconds: (v) => [0, 15, 30, 45, 60].includes(v as number),
@@ -88,6 +92,7 @@ export function initialState(settings: Partial<Settings> = {}): GameState {
     players: [],
     settings: { ...DEFAULT_SETTINGS, ...settings },
     round: null,
+    match: null,
     roundCount: 0,
     timers: {},
     pausedRemaining: {},
@@ -137,6 +142,9 @@ const OUTCOME_WINNER: Record<OutcomeReason, Outcome['winner']> = {
   lastChanceWrong: 'civilians',
   imposterLeft: 'none',
   aborted: 'none',
+  imposterCaught: 'civilians',
+  outOfLives: 'imposter',
+  lastTwo: 'imposter',
 };
 
 type Result = 'ok' | 'noop' | ErrorCode;
@@ -172,6 +180,7 @@ class Tx {
       case 'round:start':
         return this.s.phase === 'lobby' ? this.startRound() : 'WRONG_PHASE';
       case 'round:next':
+        if (this.s.phase === 'intermission') return this.startRound(true);
         return this.s.phase === 'result' ? this.startRound() : 'WRONG_PHASE';
       case 'lobby:return':
         return this.returnToLobby();
@@ -219,13 +228,26 @@ class Tx {
     return this.s.players.find((p) => p.id === id);
   }
 
+  /** In the current round and not voted out of a Manhunt match. */
   isParticipant(id: string): boolean {
-    return !!this.s.round && this.s.round.turnOrder.includes(id);
+    return !!this.s.round && this.s.round.turnOrder.includes(id) && !this.isOut(id);
+  }
+
+  isOut(id: string): boolean {
+    return !!this.s.match?.out.includes(id);
+  }
+
+  /** A Manhunt match is running (not yet won or lost). */
+  get inMatch(): boolean {
+    return !!this.s.match && !this.s.match.over;
   }
 
   participants(): Player[] {
     if (!this.s.round) return [];
-    return this.s.round.turnOrder.map((id) => this.player(id)).filter((p): p is Player => !!p);
+    return this.s.round.turnOrder
+      .filter((id) => !this.isOut(id))
+      .map((id) => this.player(id))
+      .filter((p): p is Player => !!p);
   }
 
   connectedParticipants(): Player[] {
@@ -327,6 +349,7 @@ class Tx {
     this.s.players.splice(index, 1);
     this.s.players.forEach((p, seat) => (p.seat = seat));
     delete this.s.scores[id];
+    if (this.s.match) this.s.match.out = this.s.match.out.filter((pid) => pid !== id);
 
     const round = this.s.round;
     if (!round || !isActive(this.s.phase) || !round.turnOrder.includes(id)) {
@@ -376,6 +399,7 @@ class Tx {
     this.clearAllTimers();
     this.s.phase = 'lobby';
     this.s.round = null;
+    this.s.match = null;
     this.s.paused = false;
     this.s.pausedReason = null;
     this.s.pausedRemaining = {};
@@ -388,8 +412,16 @@ class Tx {
 
   // ── round start and reveal ─────────────────────────────────────────────
 
-  startRound(): Result {
-    const connected = this.s.players.filter((p) => p.connected);
+  /**
+   * Start a round. `continueMatch` deals the next round of a Manhunt match: same imposter,
+   * new word, without the players who were voted out (REQ-MODE-3).
+   */
+  startRound(continueMatch = false): Result {
+    const match = continueMatch ? this.s.match : null;
+    const eligible = this.s.players.filter(
+      (p) => !match || (!p.standby && !match.out.includes(p.id)),
+    );
+    const connected = eligible.filter((p) => p.connected);
     if (connected.length < LIMITS.minPlayers) return 'NOT_ENOUGH_PLAYERS';
     const picked = pickWord(
       this.ctx.library,
@@ -401,13 +433,29 @@ class Tx {
 
     this.clearAllTimers();
     for (const p of this.s.players) {
-      p.standby = false;
+      // MODE-8: mid-match joiners keep waiting until the match ends.
+      if (!match) p.standby = false;
       p.ready = false;
     }
 
     // ROLE-1: imposter from seated, connected players. CLUE-1: random starting seat.
-    const imposter = connected[this.ctx.rng.int(connected.length)]!;
-    const seated = [...this.s.players].sort((a, b) => a.seat - b.seat).map((p) => p.id);
+    const imposterId = match ? match.imposterId : connected[this.ctx.rng.int(connected.length)]!.id;
+    if (!match) {
+      const lives = this.s.settings.lives;
+      this.s.match =
+        this.s.settings.mode === 'manhunt'
+          ? {
+              imposterId,
+              lives,
+              livesLeft: lives === 0 ? null : lives,
+              out: [],
+              rounds: 0,
+              over: false,
+            }
+          : null;
+    }
+    if (this.s.match) this.s.match.rounds += 1;
+    const seated = [...eligible].sort((a, b) => a.seat - b.seat).map((p) => p.id);
     const start = this.ctx.rng.int(seated.length);
     const turnOrder = [...seated.slice(start), ...seated.slice(0, start)];
 
@@ -417,7 +465,7 @@ class Tx {
       categoryId: picked.category.id,
       categoryName: picked.category.name,
       word: picked.entry,
-      imposterId: imposter.id,
+      imposterId,
       turnOrder,
       turnIndex: 0,
       lap: 1,
@@ -597,7 +645,8 @@ class Tx {
     const record: VoteRecord = { votes, tally, result: 'eject', ejectedId: null, tied: [] };
     if (max === 0) record.result = 'noVotes';
     else if (top.length > 1) {
-      record.result = hadRevote ? 'doubleTie' : 'revote';
+      // MODE-4: a Manhunt tie ejects nobody and has no revote.
+      record.result = this.inMatch ? 'noEject' : hadRevote ? 'doubleTie' : 'revote';
       record.tied = top;
     } else record.ejectedId = top[0]!;
 
@@ -610,6 +659,10 @@ class Tx {
 
   resolveReveal() {
     const ballot = this.round.ballots.at(-1)!;
+    if (this.inMatch) {
+      this.resolveManhunt(ballot);
+      return;
+    }
     switch (ballot.result) {
       case 'revote':
         this.startVoting(ballot.tied);
@@ -627,6 +680,30 @@ class Tx {
     }
   }
 
+  /** REQ-MODE-4/5/6: catch the imposter, or lose a life and keep hunting. */
+  resolveManhunt(ballot: VoteRecord) {
+    const match = this.s.match!;
+    if (ballot.result !== 'eject') {
+      this.intermission();
+      return;
+    }
+    if (ballot.ejectedId === this.round.imposterId) {
+      this.finish('imposterCaught');
+      return;
+    }
+    match.out.push(ballot.ejectedId!);
+    if (match.livesLeft !== null) match.livesLeft -= 1;
+    if (match.livesLeft === 0) this.finish('outOfLives');
+    else if (this.participants().length <= 2) this.finish('lastTwo');
+    else this.intermission();
+  }
+
+  intermission() {
+    this.s.phase = 'intermission';
+    this.clearTimer('phase');
+    this.cue({ cue: 'intermission' });
+  }
+
   // ── guesses ────────────────────────────────────────────────────────────
 
   startLastChance() {
@@ -638,6 +715,8 @@ class Tx {
   submitGuess(playerId: string, rawText: string): Result {
     const guard = this.guardPlay(playerId, null);
     if (guard !== 'ok') return guard;
+    // MODE-2: in Manhunt the imposter can only blend in.
+    if (this.s.settings.mode === 'manhunt' || this.inMatch) return 'GUESS_NOT_ALLOWED';
     const round = this.round;
     const early =
       this.s.settings.earlyGuess && ['clues', 'discussion', 'voting'].includes(this.s.phase);
@@ -688,6 +767,7 @@ class Tx {
     this.s.pausedReason = null;
     this.s.pausedRemaining = {};
     round.outcome = { winner: OUTCOME_WINNER[reason], reason, overridden: false };
+    if (this.s.match) this.s.match.over = true;
     this.s.phase = 'result';
     this.applyScores(round.outcome, 1);
     if ((reason === 'earlyGuessWrong' || reason === 'lastChanceWrong') && round.guess) {
@@ -696,12 +776,26 @@ class Tx {
     this.cue({ cue: 'result' });
   }
 
-  /** RES-4: civilians +1 each on a win; imposter +2 for a vote win, +3 for a guess win. */
+  /**
+   * RES-4: civilians +1 each on a win; imposter +2 for a vote win, +3 for a guess win.
+   * MODE-9 (Manhunt): every civilian of the match, in or out, +1; imposter +3.
+   */
   applyScores(outcome: Outcome, sign: 1 | -1) {
     const round = this.round;
     const add = (id: string, n: number) => {
       if (this.player(id)) this.s.scores[id] = (this.s.scores[id] ?? 0) + sign * n;
     };
+    const match = this.s.match;
+    if (match) {
+      if (outcome.winner === 'civilians') {
+        const civilians = new Set([...round.turnOrder, ...match.out]);
+        civilians.delete(match.imposterId);
+        for (const id of civilians) add(id, 1);
+      } else if (outcome.winner === 'imposter') {
+        add(match.imposterId, 3);
+      }
+      return;
+    }
     if (outcome.winner === 'civilians') {
       for (const id of round.turnOrder) if (id !== round.imposterId) add(id, 1);
     } else if (outcome.winner === 'imposter') {

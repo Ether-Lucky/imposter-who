@@ -152,3 +152,64 @@ describe('controller', () => {
     expect(html).toContain('Reconnecting');
   });
 });
+
+describe('Manhunt screens (REQ-MODE)', () => {
+  const manhunt = () => new Script({ mode: 'manhunt', lives: 2 }).join(5).start();
+
+  /** Vote out the first civilian and land in the intermission. */
+  const toIntermission = () => {
+    const s = manhunt();
+    const victim = s.civilian;
+    s.toVoting().voteOut(victim).act({ type: 'reveal:done' });
+    return { s, victim };
+  };
+
+  it('board shows lives and the intermission without naming the imposter', () => {
+    const { s, victim } = toIntermission();
+    expect(s.state.phase).toBe('intermission');
+    const html = host(s);
+    expect(html).toContain(`Pax${victim.slice(1)} was not the imposter`);
+    expect(html).toContain('Lives left: <!-- -->1 of 2');
+    expect(html).toContain('Out');
+    expect(html).not.toContain('>Imposter<');
+    expect(html).toContain('End match');
+  });
+
+  it('the voted-out phone becomes a ghost that sees the imposter', () => {
+    const { s, victim } = toIntermission();
+    const html = phone(s, victim);
+    expect(html).toContain('off the train');
+    expect(html).toContain(`Pax${s.imposter.slice(1)}`);
+    expect(html).not.toContain('Hold to see your destination');
+  });
+
+  it('players still in see the intermission message', () => {
+    const { s, victim } = toIntermission();
+    expect(phone(s, s.imposter)).toContain('was not the imposter');
+    expect(
+      phone(
+        s,
+        s.round.turnOrder.find((id) => id !== s.imposter && id !== victim)!,
+      ),
+    ).toContain('A new word is coming');
+  });
+
+  it('nobody gets a guess option, and both roles look the same', () => {
+    const s = manhunt().toClues();
+    while (s.round.turnOrder[s.round.turnIndex] === s.imposter) {
+      s.act({ type: 'clue:submit', playerId: s.imposter, text: 'hintz' });
+    }
+    const current = s.round.turnOrder[s.round.turnIndex];
+    const civilian = s.round.turnOrder.find((id) => id !== s.imposter && id !== current)!;
+    expect(phone(s, s.imposter)).not.toContain('Guess the destination');
+    expect(skeleton(phone(s, s.imposter))).toBe(skeleton(phone(s, civilian)));
+  });
+
+  it('settings show lives only in Manhunt', () => {
+    const classic = new Script().join(3);
+    expect(host(classic)).not.toContain('Lives (wrong votes allowed)');
+    const hunt = new Script({ mode: 'manhunt' }).join(3);
+    expect(host(hunt)).toContain('Lives (wrong votes allowed)');
+    expect(host(hunt)).not.toContain('Imposter can guess early');
+  });
+});

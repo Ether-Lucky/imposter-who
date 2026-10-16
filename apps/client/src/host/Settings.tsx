@@ -9,6 +9,16 @@ const secs = (values: number[]): Option<number>[] =>
   values.map((v) => ({ value: v, label: v === 0 ? 'Off' : `${v} s` }));
 
 const CHOICES = {
+  mode: [
+    { value: 'classic', label: 'Classic' },
+    { value: 'manhunt', label: 'Manhunt' },
+  ],
+  lives: [
+    { value: 1, label: '1' },
+    { value: 2, label: '2' },
+    { value: 3, label: '3' },
+    { value: 0, label: 'Unlimited' },
+  ],
   clueMode: [
     { value: 'typed', label: 'Typed on phone' },
     { value: 'spoken', label: 'Spoken aloud' },
@@ -20,6 +30,8 @@ const CHOICES = {
 } as const;
 
 const LABELS: Record<keyof typeof CHOICES, string> = {
+  mode: 'Game mode',
+  lives: 'Lives (wrong votes allowed)',
   clueMode: 'Clue mode',
   laps: 'Laps per round',
   clueSeconds: 'Clue timer',
@@ -111,16 +123,24 @@ export function SettingsPanel({
   return (
     <div className="grid gap-6">
       <div className="grid gap-5 sm:grid-cols-2">
-        {(Object.keys(CHOICES) as (keyof typeof CHOICES)[]).map((key) => (
-          <Segmented
-            key={key}
-            label={LABELS[key]}
-            options={CHOICES[key] as readonly Option<string | number>[]}
-            value={settings[key]}
-            onChange={(v) => update({ [key]: v } as Partial<SettingsT>)}
-          />
-        ))}
+        {(Object.keys(CHOICES) as (keyof typeof CHOICES)[])
+          .filter((key) => key !== 'lives' || settings.mode === 'manhunt')
+          .map((key) => (
+            <Segmented
+              key={key}
+              label={LABELS[key]}
+              options={CHOICES[key] as readonly Option<string | number>[]}
+              value={settings[key]}
+              onChange={(v) => update({ [key]: v } as Partial<SettingsT>)}
+            />
+          ))}
       </div>
+
+      <p className="text-sm text-ink-dim">
+        {settings.mode === 'manhunt'
+          ? 'Manhunt: the imposter can never guess. Wrong votes knock a passenger out and cost a life; a new word each round until the imposter is caught or the lives run out.'
+          : 'Classic: one vote. If caught, the imposter gets one guess at the word to steal the win.'}
+      </p>
 
       <div className="grid gap-1">
         <Toggle
@@ -128,11 +148,13 @@ export function SettingsPanel({
           checked={settings.showCategoryToImposter}
           onChange={(v) => update({ showCategoryToImposter: v })}
         />
-        <Toggle
-          label="Imposter can guess early (wrong guess loses)"
-          checked={settings.earlyGuess}
-          onChange={(v) => update({ earlyGuess: v })}
-        />
+        {settings.mode === 'classic' && (
+          <Toggle
+            label="Imposter can guess early (wrong guess loses)"
+            checked={settings.earlyGuess}
+            onChange={(v) => update({ earlyGuess: v })}
+          />
+        )}
         <Toggle
           label="Sound on this laptop"
           checked={settings.hostSound}

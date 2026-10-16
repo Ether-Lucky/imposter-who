@@ -95,6 +95,20 @@ imposter-who/
    └────────────────────────── lobby:return ◄──────────────────────┘
 ```
 
+**Manhunt (REQ-MODE):** `VOTE_REVEAL` resolves differently. Imposter ejected → `RESULT` (civilians win). Civilian ejected → they join `match.out`, lives −1, then `RESULT` if lives hit 0 or only 2 remain, else `INTERMISSION`. Tie or no votes → `INTERMISSION`. `round:next` from `INTERMISSION` deals a new word to the same imposter and the remaining players. `LAST_CHANCE` never happens.
+
+```ts
+interface Match {            // GameState.match, Manhunt only
+  imposterId: string;        // server-only until the result
+  lives: 0 | 1 | 2 | 3;      // 0 = Unlimited
+  livesLeft: number | null;  // null when Unlimited
+  out: string[];             // voted-out civilians, in order
+  rounds: number;
+}
+```
+
+Views add a public `match` summary (`lives`, `livesLeft`, `out`, `rounds`, never the imposter) and, on an out player's own view only, `you.ghost = { imposterId, word }`.
+
 Cross-cutting flags: `paused` (host pause or RECON-4), `deadline` (epoch ms for the current timer, or null).
 
 ### 4.1 Core types (abridged)

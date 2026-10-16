@@ -50,6 +50,15 @@ export interface PublicRound {
   overrideOpen: boolean;
 }
 
+/** Manhunt match summary. Never names the imposter (REQ-SEC-1). */
+export interface PublicMatch {
+  lives: 0 | 1 | 2 | 3;
+  livesLeft: number | null;
+  out: string[];
+  rounds: number;
+  over: boolean;
+}
+
 export interface PublicView {
   phase: Phase;
   paused: boolean;
@@ -61,6 +70,7 @@ export interface PublicView {
   settings: Settings;
   players: PublicPlayer[];
   round: PublicRound | null;
+  match: PublicMatch | null;
 }
 
 export type HostView = PublicView;
@@ -81,6 +91,10 @@ export interface You {
   myVote: string | null;
   isTurn: boolean;
   canGuess: boolean;
+  /** Voted out of a Manhunt match. */
+  out: boolean;
+  /** REQ-MODE-7: what a voted-out player gets to see. Null for everyone still playing. */
+  ghost: { imposterId: string; word: string | null } | null;
 }
 
 export interface PlayerView extends PublicView {
@@ -126,6 +140,13 @@ function publicView(state: GameState): PublicView {
       outcome: showAll && round.outcome ? { ...round.outcome } : null,
       overrideOpen: showAll && !!state.timers.override,
     },
+    match: state.match && {
+      lives: state.match.lives,
+      livesLeft: state.match.livesLeft,
+      out: [...state.match.out],
+      rounds: state.match.rounds,
+      over: state.match.over,
+    },
   };
 }
 
@@ -139,7 +160,9 @@ export function playerView(state: GameState, playerId: string): PlayerView {
   if (!player) return { ...view, you: null };
 
   const round = state.round;
-  const playing = !!round && round.turnOrder.includes(playerId) && state.phase !== 'lobby';
+  const match = state.match;
+  const out = !!match && match.out.includes(playerId);
+  const playing = !!round && !out && round.turnOrder.includes(playerId) && state.phase !== 'lobby';
   const isImposter = playing && round.imposterId === playerId;
 
   let ticket: Ticket | null = null;
@@ -155,7 +178,12 @@ export function playerView(state: GameState, playerId: string): PlayerView {
   const earlyWindow =
     state.settings.earlyGuess && ['clues', 'discussion', 'voting'].includes(state.phase);
   const canGuess =
-    isImposter && !state.paused && !round.guess && (earlyWindow || state.phase === 'lastChance');
+    isImposter &&
+    state.settings.mode !== 'manhunt' &&
+    !match &&
+    !state.paused &&
+    !round.guess &&
+    (earlyWindow || state.phase === 'lastChance');
 
   return {
     ...view,
@@ -168,6 +196,11 @@ export function playerView(state: GameState, playerId: string): PlayerView {
       myVote: playing && state.phase === 'voting' ? (round.votes[playerId] ?? null) : null,
       isTurn: view.round?.currentPlayerId === playerId,
       canGuess: canGuess && isActive(state.phase),
+      out,
+      ghost:
+        out && match
+          ? { imposterId: match.imposterId, word: round ? round.word.word : null }
+          : null,
     },
   };
 }

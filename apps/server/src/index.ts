@@ -41,6 +41,18 @@ function openBrowser(url: string) {
   });
 }
 
+// Windows lets 0.0.0.0:3000 and 127.0.0.1:3000 both bind, so a leftover copy of the game
+// would silently take the laptop's own requests. Refuse to start next to one.
+const alreadyRunning = await fetch(`http://127.0.0.1:${port}/api/health`, {
+  signal: AbortSignal.timeout(1000),
+})
+  .then((r) => r.ok)
+  .catch(() => false);
+if (alreadyRunning) {
+  console.error(`Another copy of the game is already running on port ${port}. Stop it first.`);
+  process.exit(1);
+}
+
 try {
   // Behind a tunnel only the tunnel needs to reach us, so stay off the LAN.
   await server.listen(port, publicMode ? '127.0.0.1' : '0.0.0.0');

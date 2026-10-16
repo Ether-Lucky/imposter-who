@@ -4,7 +4,7 @@ import type { HostView } from '@imposter-who/core';
 import { formatClock } from '../net/clock.ts';
 import { useCountdown } from '../net/useCountdown.ts';
 import { Button } from '../ui/Button.tsx';
-import { OUTCOME_LABEL, PHASE_LABEL, nameOf } from '../ui/labels.ts';
+import { OUTCOME_LABEL, PHASE_LABEL, livesLabel, nameOf } from '../ui/labels.ts';
 import { Board } from './Board.tsx';
 import { Lobby } from './Lobby.tsx';
 import type { HostScreenProps, Send } from './types.ts';
@@ -24,7 +24,15 @@ function Header({ view, offset }: { view: HostView; offset: number }) {
       </div>
       {round && (
         <p className="text-lg tracking-wide uppercase">
-          Round {round.number}
+          {view.match ? `Manhunt round ${view.match.rounds}` : `Round ${round.number}`}
+          {view.match && (
+            <>
+              <span className="text-ink-dim"> · Lives: </span>
+              <span className={view.match.livesLeft === 1 ? 'text-red' : ''}>
+                {livesLabel(view.match)}
+              </span>
+            </>
+          )}
           <span className="text-ink-dim"> · Line: </span>
           {round.categoryName ?? 'Classified'}
           {view.phase === 'clues' && round.laps > 1 && (
@@ -91,12 +99,13 @@ function Controls({ view, send }: { view: HostView; send: Send }) {
           tone="danger"
           className="ml-auto"
           onClick={() => {
-            if (confirm('End this round with no result and go back to check-in?')) {
+            const what = view.match ? 'match' : 'round';
+            if (confirm(`End this ${what} with no result and go back to check-in?`)) {
               void act('lobby:return');
             }
           }}
         >
-          End round
+          {view.match ? 'End match' : 'End round'}
         </Button>
       )}
       {error && <p className="text-red">{error}</p>}
@@ -117,6 +126,7 @@ function VoteReveal({ view, send }: { view: HostView; send: Send }) {
   else if (ballot.result === 'revote')
     headline = `Tie. Revote between ${ballot.tied.map((id) => nameOf(view, id)).join(' and ')}`;
   else if (ballot.result === 'doubleTie') headline = 'Tied again. Nobody leaves';
+  else if (ballot.result === 'noEject') headline = 'Tie. Nobody leaves the train';
   else headline = 'Nobody voted';
 
   return (
@@ -130,6 +140,33 @@ function VoteReveal({ view, send }: { view: HostView; send: Send }) {
       >
         Continue
       </Button>
+    </div>
+  );
+}
+
+/** REQ-MODE-6: between rounds of a Manhunt match. */
+function Intermission({ view, send }: { view: HostView; send: Send }) {
+  const { error, act } = useAck(send);
+  const ballot = view.round!.ballots.at(-1);
+  const match = view.match!;
+  const ejected = ballot?.result === 'eject' ? ballot.ejectedId : null;
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h2 className="text-5xl font-black uppercase">
+          {ejected ? `${nameOf(view, ejected)} was not the imposter` : 'Nobody was voted out'}
+        </h2>
+        <p className="mt-2 text-2xl text-amber uppercase">
+          The imposter is still on board. Lives left: {livesLabel(match)}
+        </p>
+      </div>
+      <Board view={view} showVotes />
+      <div className="flex flex-wrap gap-3">
+        <Button tone="primary" className="min-h-14 px-8 text-xl" onClick={() => act('round:next')}>
+          Next round
+        </Button>
+      </div>
+      {error && <p className="text-red">{error}</p>}
     </div>
   );
 }
@@ -279,6 +316,8 @@ function Body({ view, send }: { view: HostView; send: Send }) {
           <p className="text-3xl text-amber uppercase">Last call: can they name the destination?</p>
         </div>
       );
+    case 'intermission':
+      return <Intermission view={view} send={send} />;
     case 'result':
       return <Result view={view} send={send} />;
   }

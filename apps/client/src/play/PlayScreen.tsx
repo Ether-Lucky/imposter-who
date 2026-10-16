@@ -9,7 +9,7 @@ import type { Status } from '../net/connection.ts';
 import { useCountdown } from '../net/useCountdown.ts';
 import { Button } from '../ui/Button.tsx';
 import { HoldButton } from '../ui/HoldButton.tsx';
-import { OUTCOME_LABEL, PHASE_LABEL, nameOf } from '../ui/labels.ts';
+import { OUTCOME_LABEL, PHASE_LABEL, livesLabel, nameOf } from '../ui/labels.ts';
 import { TicketCard, type TicketMode } from './Ticket.tsx';
 
 export type Send = (event: string, payload?: unknown) => Promise<Ack>;
@@ -342,6 +342,42 @@ export function PlayScreen({ view, offset, status, kicked, send, onRejoin }: Pla
   }
 
   const round = view.round;
+
+  // REQ-MODE-7: voted out of a Manhunt match. Watch, knowing who the imposter is.
+  if (you.ghost && view.phase !== 'result') {
+    return (
+      <>
+        {banner}
+        <Shell
+          strip={
+            <Strip view={view} offset={offset}>
+              You're off the train
+            </Strip>
+          }
+          ticket={
+            <article className="grid w-full max-w-sm gap-4 rounded-xl border-2 border-dashed border-ink/30 p-6">
+              <p className="text-sm tracking-widest text-ink-dim uppercase">The imposter is</p>
+              <p className="text-4xl font-black text-red uppercase">
+                {nameOf(view, you.ghost.imposterId)}
+              </p>
+              {you.ghost.word && (
+                <>
+                  <p className="text-sm tracking-widest text-ink-dim uppercase">Destination</p>
+                  <p className="text-3xl font-black uppercase">{you.ghost.word}</p>
+                </>
+              )}
+            </article>
+          }
+          actions={
+            <Message>
+              You're out, but keep watching. Keep a straight face and don't help anyone.
+            </Message>
+          }
+        />
+      </>
+    );
+  }
+
   const me = view.players.find((p) => p.id === you.id);
   const playing = !!you.ticket && view.phase !== 'lobby';
   const ready = me?.ready ?? false;
@@ -451,6 +487,21 @@ export function PlayScreen({ view, offset, status, kicked, send, onRejoin }: Pla
       case 'voteReveal':
         actions = <Message>Look at the board.</Message>;
         break;
+      case 'intermission': {
+        const ballot = round!.ballots.at(-1);
+        const ejected = ballot?.result === 'eject' ? ballot.ejectedId : null;
+        actions = (
+          <div className="grid gap-1 text-center">
+            <p className="text-xl font-bold uppercase">
+              {ejected ? `${nameOf(view, ejected)} was not the imposter` : 'Nobody was voted out'}
+            </p>
+            <p className="text-ink-dim">
+              Lives left: {view.match ? livesLabel(view.match) : '-'}. A new word is coming.
+            </p>
+          </div>
+        );
+        break;
+      }
       case 'lastChance':
         actions = you.canGuess ? (
           <GuessForm send={send} />

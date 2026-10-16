@@ -9,6 +9,7 @@ export const PHASE_LABEL: Record<Phase, string> = {
   voting: 'Final call',
   voteReveal: 'Counting votes',
   lastChance: 'Last call',
+  intermission: 'Next departure',
   result: 'Arrivals',
 };
 
@@ -22,7 +23,15 @@ export const OUTCOME_LABEL: Record<Outcome['reason'], string> = {
   lastChanceWrong: 'The imposter was caught',
   imposterLeft: 'The imposter left the station',
   aborted: 'Service cancelled: not enough passengers',
+  imposterCaught: 'The imposter was caught',
+  outOfLives: 'The civilians ran out of lives',
+  lastTwo: 'Only two passengers left on board',
 };
+
+/** "2 of 3", or "Unlimited" when the match has no life limit. */
+export function livesLabel(match: { lives: number; livesLeft: number | null }): string {
+  return match.livesLeft === null ? 'Unlimited' : `${match.livesLeft} of ${match.lives}`;
+}
 
 export function nameOf(view: PublicView, id: string | null | undefined): string {
   return view.players.find((p) => p.id === id)?.name ?? 'Someone';

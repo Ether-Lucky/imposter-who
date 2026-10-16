@@ -435,3 +435,44 @@ describe('integration: public mode over a tunnel', () => {
     expect(root.headers.get('location')).toBe('/play');
   });
 });
+
+describe('integration: Manhunt over real sockets (REQ-MODE)', () => {
+  it('votes out a civilian, turns them into a ghost, and continues the hunt', async () => {
+    h = await startHarness();
+    const { host, phones } = await table(5, { mode: 'manhunt', lives: 2 });
+    const { imposter, civilians } = await startRound(host, phones);
+    for (const p of phones) await p.ok('ticket:torn');
+    await host.waitFor((v) => v.phase === 'clues');
+    expect(await imposter.emit('guess:submit', { text: 'anything' })).toMatchObject({
+      ok: false,
+      code: 'GUESS_NOT_ALLOWED',
+    });
+
+    await host.ok('phase:skip');
+    while (host.view.phase === 'clues') await host.ok('phase:skip');
+    await host.waitFor((v) => v.phase === 'discussion');
+    await host.ok('phase:skip');
+    await host.waitFor((v) => v.phase === 'voting');
+
+    const victim = civilians[0]!;
+    const victimId = victim.view.you!.id;
+    for (const p of phones) {
+      await p.ok('vote:cast', { targetId: p === victim ? imposter.view.you!.id : victimId });
+    }
+    await host.waitFor((v) => v.phase === 'voteReveal');
+    await host.ok('reveal:done');
+    const mid = await host.waitFor((v) => v.phase === 'intermission');
+    expect(mid.match).toMatchObject({ livesLeft: 1, out: [victimId] });
+    expect(mid.round!.imposterId).toBeNull();
+
+    const ghost = await victim.waitFor((v) => !!v.you?.ghost);
+    expect(ghost.you!.ghost!.imposterId).toBe(imposter.view.you!.id);
+
+    await host.ok('round:next');
+    const next = await host.waitFor((v) => v.phase === 'reveal');
+    expect(next.round!.turnOrder).not.toContain(victimId);
+    expect(next.match!.rounds).toBe(2);
+    await imposter.waitFor((v) => v.phase === 'reveal');
+    expect(imposter.view.you!.ticket!.headline).toBe(IMPOSTER_HEADLINE);
+  });
+});

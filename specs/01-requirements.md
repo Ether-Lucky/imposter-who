@@ -57,6 +57,8 @@ Product context lives in [PRODUCT.md](../PRODUCT.md). This file lists numbered, 
 
 | Setting | Values | Default |
 |---|---|---|
+| Game mode | Classic / Manhunt (see §9b) | Classic |
+| Lives (Manhunt) | 1, 2, 3, Unlimited | 2 |
 | Clue mode | Typed on phone / Spoken aloud | Typed |
 | Laps per round | 1, 2, 3 | 1 |
 | Clue timer per turn | Off, 15, 30, 45, 60 s | 30 s |
@@ -64,7 +66,7 @@ Product context lives in [PRODUCT.md](../PRODUCT.md). This file lists numbered, 
 | Vote timer | Off, 30, 60 s | 60 s |
 | Categories | Any subset of built-in and custom | All built-in |
 | Show category to imposter | On / Off | On |
-| Early imposter guess | On / Off | On |
+| Early imposter guess (Classic only) | On / Off | On |
 | Sound on host | On / Off, volume | On, 70% |
 
 **REQ-LOBBY-4 (SHOULD) How-to-play.** WHEN the host taps "How to play", THE SYSTEM SHALL show a 4-step animated explainer on the host display that anyone can skip.
@@ -150,6 +152,33 @@ Product context lives in [PRODUCT.md](../PRODUCT.md). This file lists numbered, 
 
 **REQ-RES-4 (SHOULD) Scores.** Running scores for the session: each civilian +1 when civilians win; the imposter +2 for a vote win and +3 for a guess win. The host can reset scores.
 
+## 9b. Manhunt mode (MODE)
+
+A second game mode where the imposter can never guess the word: their only way to win is to blend in. A **match** is a series of rounds with the **same imposter** and a **new word each round**. Wrong votes cost the civilians a life and knock that player out of the match.
+
+**REQ-MODE-1 (MUST) Mode setting.** The host chooses Classic or Manhunt in the lobby. Classic behaves exactly as sections 4 to 9 describe.
+
+**REQ-MODE-2 (MUST) No guessing.** In Manhunt THE SYSTEM SHALL refuse every imposter guess, early or after being voted out. There is no last-chance phase, and no controller shows a guess option.
+
+**REQ-MODE-3 (MUST) Match and imposter.** WHEN a Manhunt match starts, THE SYSTEM SHALL pick the imposter once (as ROLE-1). Every later round of the match keeps that imposter and deals a new word (WORD-3 still applies).
+
+**REQ-MODE-4 (MUST) Voting.**
+- WHEN the vote ejects the imposter, the civilians win the match.
+- WHEN the vote ejects a civilian, that player is **out** for the rest of the match (no clues, no votes, not a vote target) and the civilians lose one life.
+- WHEN the top vote is tied, or nobody votes, nobody is out and no life is lost. There is no revote.
+
+**REQ-MODE-5 (MUST) Lives and the end.**
+- Lives is 1, 2, 3 or Unlimited. WHEN the civilians reach 0 lives, the imposter wins.
+- WHEN only 2 players remain in the match (the imposter and one civilian), the imposter wins, whatever the lives.
+
+**REQ-MODE-6 (MUST) Between rounds.** WHEN a round ends without ending the match, THE SYSTEM SHALL show an intermission: who was voted out (and that they were not the imposter), or that nobody was, plus the lives left. The host starts the next round from there, or ends the match.
+
+**REQ-MODE-7 (MUST) Ghosts.** A player who is out SHALL see on their own phone who the imposter is, and the current word. Nobody else's view changes (SEC-1 still holds for every player still in the match).
+
+**REQ-MODE-8 (MUST) Joining mid-match.** Players who join during a match wait on standby until the match ends.
+
+**REQ-MODE-9 (SHOULD) Scores.** Civilians win: every civilian in the match, in or out, gets +1. Imposter wins: +3.
+
 ## 10. Reconnection and robustness (RECON)
 
 **REQ-RECON-1 (MUST) Silent rejoin.** Each controller stores a random player token in `localStorage`. WHEN a phone reconnects with that token, THE SYSTEM SHALL restore the same seat, name, role and secret, and resume the current phase, without asking for a name.
@@ -224,4 +253,5 @@ The full spec is [04-ui-motion.md](04-ui-motion.md). Requirements here are the o
 | D10 | Scoring values (RES-4) | Decided |
 | D11 | Single game per server (no room codes) | Decided |
 | D12 | Multiple imposters / team modes | Later |
+| D14 | Manhunt mode: no imposter guesses; lives 1/2/3/Unlimited; new word each round; ties eject nobody and cost nothing; ghosts see the imposter | Decided |
 | D13 | Remote test runs use a Cloudflare quick tunnel (laptop stays the server). Vercel ruled out: serverless functions cannot hold the Socket.IO connections or in-memory game state | Decided |
