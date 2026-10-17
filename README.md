@@ -101,7 +101,7 @@ The address changes every time you run it, and the laptop must stay on while you
 | Categories                         | 8 built-in English categories, plus your own |
 | Show the category to the imposter  | On / Off                                     |
 | Imposter can guess early (Classic) | On / Off                                     |
-| Sound on this laptop               | On / Off                                     |
+| Sound on this laptop               | On / Off, with a volume level                |
 | Reduce motion                      | On / Off (also applies to every phone)       |
 
 Open the settings with **TIMETABLE** at the bottom left of the board; **RULES** plays a short how-to-play on the board, and **HELP** has the phone connection checklist with a test of the address.
@@ -143,7 +143,7 @@ The server sends each phone only what that player may see; the secret word and t
 
 Open several test "phones" in one browser with `/play?as=name`; each name keeps its own seat.
 
-**End-to-end test:** run `npx playwright install chromium` once, then `npm run e2e`. It starts its own server on fresh settings (ports 3000 and 5173 must be free). To use an installed browser instead, set `PW_CHANNEL=msedge` or `PW_CHANNEL=chrome`. `DATA_DIR=<folder>` points any server run at a different settings folder.
+**End-to-end test:** run `npx playwright install chromium` once, then `npm run e2e`. It starts its own server on fresh settings (on ports 3200 and 5273, so a running game is left alone). To use an installed browser instead, set `PW_CHANNEL=msedge` or `PW_CHANNEL=chrome`. `DATA_DIR=<folder>` points any server run at a different settings folder.
 
 **Stack:** Node 24, TypeScript, Socket.IO, Express, React 19, Vite, Tailwind CSS, Motion, Vitest, Playwright. Fonts: Big Shoulders Display and Atkinson Hyperlegible (both OFL, bundled). Sounds are synthesised in the browser, so there are no audio files.
 

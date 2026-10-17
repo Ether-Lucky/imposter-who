@@ -224,6 +224,33 @@ Manhunt reuses 4.1 to 4.11. These are the differences.
   - The platform ticker (4.7) runs with Manhunt house lines (`THE IMPOSTER REMAINS ON BOARD`).
 - **Match end:** Arrivals (4.11) with the header `IMPOSTER CAUGHT` or `IMPOSTER ESCAPED`, plus a summary row: rounds played and lives left. Every out passenger's row keeps its red `CANCELLED`.
 
+### 4.13 The clock (REQ-UX-8)
+
+- **Big clock:** the top-right corner of the board is a clock module two rows tall and seven columns wide: `01:30` in double-height flap cells, so it reads from across the room. Rows 0 and 1 make room for it.
+- **Draining bar:** a thin amber line under the headline, full width, shrinks from right to left as time runs out. The full length is the phase's set time (clue, discussion or vote timer, or 30 s for the last call), stretched if the host adds time.
+- **Last 10 seconds:** the clock and bar turn amber and a soft tick plays each second. **Last 5 seconds:** the clock module pulses once per second (scale 1 to 1.06 and back, 300 ms) and the board's frame glints amber at each tick.
+- **Time up:** a short buzzer, and the clock flaps to `00:00` and holds.
+- **Paused:** the clock reads `PAUSE` and the bar freezes.
+- Reduced motion: no pulse or glint; colour, digits, bar and sound stay.
+
+### 4.14 Showpiece effects (REQ-UX-9)
+
+Big moments get big, mechanical effects, still in the station world (light on enamel, ink, paper, steel), never glow or neon.
+
+| Moment | Board | Reduced motion |
+| --- | --- | --- |
+| Round start | A **departure sweep**: a band of light crosses the board diagonally (600 ms) as the cascade starts, and the board **shudders** once (a 3 px mechanical jolt). | Sweep and shudder off; cascade crossfades |
+| Final call | The board lights **flicker** twice (the board dims to 70% for 60 ms, twice) with the headline blink. | Headline blink only |
+| Vote reveal tally | A **searchlight** (a lighter band one row tall) sweeps up and down the passenger rows, faster and faster, then stops on the accused as they lift. | No sweep; the accused row is marked |
+| Verdict (DEPARTED or CANCELLED, on the next screen) | A **giant stamp** slams onto the middle of the board (scale 2.2 to 1, rotated -6°), a **shockwave** ring expands from it, the board shudders hard, and chads burst from the impact. It lifts away after 2.2 s. | The stamp fades in and out; no ring, shudder or chads |
+| Civilians win | **Fireworks:** five chad bursts from different points of the board over 1.6 s, then a slow fall. | None; the headline says it |
+| Imposter wins | **The getaway:** a train of flap cells reading `IMPOSTER ESCAPED` races across the middle of the board, right to left, twice. | Static banner row |
+| Time up | Clock `00:00` holds; a single hard shudder. | No shudder |
+
+Phones: the ticket **jolts** (a quick 2-step shake) when the verdict or result lands, a **ring of amber** pulses around the screen edge while it is your turn, and the last 3 seconds of your turn flash the timer with a buzz. Same for every role.
+
+Performance: each effect is one or two elements animated with transform or opacity (no per-cell effects), so the board keeps its frame budget (§9).
+
 ## 5. Controller (phone) choreography
 
 The phone is one ticket on a dark ground. Same layout for every role (REQ-GUESS-5).

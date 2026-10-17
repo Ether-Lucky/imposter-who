@@ -19,17 +19,21 @@ export function Headline({
   text,
   tone = 'amber',
   blink,
+  w,
 }: {
   text: string;
   tone?: FlapTone;
+  /** Cells wide; the whole row unless the clock takes its corner. */
+  w?: number;
   /** Change this key to blink the headline twice (final call, 04 §4.8). */
   blink?: string;
 }) {
   const grid = useBoard();
+  const width = w ?? grid.cols;
   return (
-    <BoardItem col={0} row={1} w={grid.cols}>
+    <BoardItem col={0} row={1} w={width}>
       <h2 key={blink} className={blink ? 'headline-blink' : undefined}>
-        <FlapRow text={fitWords(text, grid.cols)} width={grid.cols} tone={tone} />
+        <FlapRow text={fitWords(text, width)} width={width} tone={tone} />
       </h2>
     </BoardItem>
   );

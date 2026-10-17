@@ -227,6 +227,10 @@ The full spec is [04-ui-motion.md](04-ui-motion.md). Requirements here are the o
 
 **REQ-UX-7 (MUST)** Text contrast meets WCAG AA (4.5:1 body, 3:1 for large text) on both surfaces.
 
+**REQ-UX-8 (MUST) Readable timers.** WHEN a phase timer runs, THE SYSTEM SHALL show the time left on the board as large digits readable from across the room (at least two board rows tall) and as a bar that drains in proportion to the time left. Every phone shows the same time as digits and a bar. In the last 10 seconds the board's clock and bar turn amber and tick once a second (a tick sound when sound is on); in the last 5 seconds the clock also pulses. The phone of the player whose turn it is vibrates at 3, 2 and 1 seconds left. A paused timer says PAUSED instead of counting.
+
+**REQ-UX-9 (MUST) Showpiece effects stay honest.** Big effects (verdict stamps, board shudders, sweeps, searchlight, fireworks) SHALL never reveal a role or the word before the screen is allowed to show it, never block input (UX-3), and SHALL have a reduced-motion path that keeps the information (UX-2). They use only the palette (04 §1.2).
+
 ## 14. Non-functional (NFR)
 
 **REQ-NFR-1 (MUST)** One command starts everything: `npm start` builds if needed, starts the server, and opens the host display in the default browser.

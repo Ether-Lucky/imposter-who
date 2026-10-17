@@ -24,7 +24,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), cleanEntryUrls()],
   server: {
     host: true,
-    port: 5173,
+    // VITE_PORT lets a second copy (tests, a dev run) sit beside a game already on 5173.
+    port: Number(process.env.VITE_PORT ?? 5173),
+    strictPort: true,
     proxy: {
       '/socket.io': { target: SERVER, ws: true, xfwd: true },
       '/api': { target: SERVER, xfwd: true },

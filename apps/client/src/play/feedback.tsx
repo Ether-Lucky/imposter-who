@@ -7,7 +7,8 @@ import { useSyncExternalStore } from 'react';
 import { SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon } from '@phosphor-icons/react';
 import { sfx, unlockAudio } from '../fx/synth.ts';
 
-export type Buzz = 'join' | 'roundStart' | 'torn' | 'turn' | 'finalCall' | 'vote' | 'win' | 'loss';
+export type Buzz =
+  'join' | 'roundStart' | 'torn' | 'turn' | 'finalCall' | 'vote' | 'win' | 'loss' | 'countdown';
 export type FeedbackLevel = 'haptics' | 'all' | 'off';
 
 /** 04 §7, phone columns. */
@@ -20,6 +21,8 @@ export const HAPTICS: Record<Buzz, number[]> = {
   vote: [25],
   win: [30, 60, 45, 60, 60],
   loss: [200],
+  /** The last 3 seconds of your turn (REQ-UX-8). */
+  countdown: [35],
 };
 
 const SOUNDS: Partial<Record<Buzz, () => void>> = {
@@ -30,6 +33,7 @@ const SOUNDS: Partial<Record<Buzz, () => void>> = {
   vote: sfx.punch,
   win: sfx.win,
   loss: sfx.loss,
+  countdown: sfx.tick,
 };
 
 const KEY = 'iw-feedback';

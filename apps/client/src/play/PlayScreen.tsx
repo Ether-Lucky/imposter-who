@@ -7,9 +7,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import type { Ack, PlayerView } from '@imposter-who/core';
 import { FlapMotion } from '../flap/Flap.tsx';
 import { burstConfetti } from '../fx/confetti.ts';
-import { formatClock } from '../net/clock.ts';
 import type { Status } from '../net/connection.ts';
-import { useCountdown } from '../net/useCountdown.ts';
+import { shortClock, useTimer } from '../net/timer.ts';
 import { Button } from '../ui/Button.tsx';
 import { HoldButton } from '../ui/HoldButton.tsx';
 import { OUTCOME_LABEL, PHASE_LABEL, livesLabel, nameOf } from '../ui/labels.ts';
@@ -70,19 +69,41 @@ function Strip({
   children?: ReactNode;
 }) {
   // The vote reveal's timer is only a server fallback; players should not watch it.
-  const timed = view.phase !== 'voteReveal';
-  const seconds = useCountdown(timed ? view.deadline : null, view.pausedRemainingMs, offset);
+  const timer = useTimer(view, offset, view.phase !== 'voteReveal');
+  const seconds = timer?.seconds ?? null;
+  const yourTurn = !!view.you?.isTurn && view.phase === 'clues';
+  // REQ-UX-8: a buzz at 3, 2 and 1 seconds left on your own turn.
+  useEffect(() => {
+    if (yourTurn && seconds !== null && seconds >= 1 && seconds <= 3 && !timer?.paused) {
+      feedback('countdown');
+    }
+  }, [yourTurn, seconds, timer?.paused]);
   return (
-    <div className="phone-strip flex min-h-12 items-center justify-between gap-3 rounded-lg bg-flap px-4 py-2">
-      <p className="text-lg tracking-wide">{children ?? PHASE_LABEL[view.phase]}</p>
-      <div className="flex items-center gap-2">
-        {seconds !== null && (
-          <p className={`text-2xl tabular-nums ${seconds <= 5 ? 'text-amber' : ''}`}>
-            {formatClock(seconds)}
-          </p>
-        )}
-        <FeedbackToggle />
+    <div className="phone-strip rounded-lg bg-flap px-4 py-2">
+      <div className="flex min-h-12 items-center justify-between gap-3">
+        <p className="text-lg tracking-wide">{children ?? PHASE_LABEL[view.phase]}</p>
+        <div className="flex items-center gap-2">
+          {timer && (
+            <p
+              role="timer"
+              aria-label={timer.paused ? 'Timer paused' : `${timer.seconds} seconds left`}
+              className={`text-4xl leading-none tabular-nums ${timer.urgent || timer.paused ? 'text-amber' : ''} ${timer.critical && !timer.paused ? 'clock-tick' : ''}`}
+              key={timer.critical ? timer.seconds : 'calm'}
+            >
+              {timer.paused ? 'HOLD' : shortClock(timer.seconds)}
+            </p>
+          )}
+          <FeedbackToggle />
+        </div>
       </div>
+      {timer && (
+        <div
+          aria-hidden
+          className="phone-bar"
+          data-urgent={timer.urgent || undefined}
+          style={{ transform: `scaleX(${timer.fraction})` }}
+        />
+      )}
     </div>
   );
 }
@@ -353,6 +374,33 @@ function GhostPass({ view }: { view: PlayerView }) {
   );
 }
 
+/** The ticket jolts when a verdict or result lands (04 §4.14). Same for every role. */
+function useVerdictJolt(view: PlayerView | null) {
+  const reduced = useReducedMotion();
+  const phase = view?.phase;
+  const key = `${phase}:${view?.round?.number}:${view?.round?.ballots.length}`;
+  useEffect(() => {
+    if (reduced || !['lastChance', 'intermission', 'result'].includes(phase ?? '')) return;
+    const id = setTimeout(() => {
+      document
+        .querySelector('.ticket')
+        ?.animate(
+          [
+            { transform: 'translate(0, 0) rotate(0deg)' },
+            { transform: 'translate(-8px, 2px) rotate(-1.5deg)' },
+            { transform: 'translate(7px, -2px) rotate(1deg)' },
+            { transform: 'translate(-3px, 0) rotate(-0.4deg)' },
+            { transform: 'translate(0, 0) rotate(0deg)' },
+          ],
+          { duration: 420, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' },
+        );
+    }, 300);
+    return () => clearTimeout(id);
+    // Once per moment, keyed by `key`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, reduced]);
+}
+
 /** Win: chads burst from the top of the ticket (04 §5.8). */
 function useResultFeedback(view: PlayerView | null) {
   const reduced = useReducedMotion();
@@ -398,6 +446,7 @@ function Controller({ view, offset, status, kicked, send, onRejoin }: PlayScreen
   const [shownRound, setShownRound] = useState<number | null>(null);
   const tear = useAction(send);
   useResultFeedback(view);
+  useVerdictJolt(view);
 
   const banner =
     status === 'offline' || status === 'connecting' ? (
@@ -637,6 +686,7 @@ function Controller({ view, offset, status, kicked, send, onRejoin }: PlayScreen
   return (
     <>
       {banner}
+      {playing && view.phase === 'clues' && you.isTurn && <div className="turn-ring" aria-hidden />}
       <Shell strip={strip} ticket={ticket} actions={actions} />
       {view.paused && (
         <div className="fixed inset-0 z-20 grid place-items-center bg-board/90">

@@ -467,4 +467,57 @@
     ) {
     animation-duration: 1ms;
   }
+
+  /* Your turn: an amber ring pulses round the screen edge (04 §4.14). */
+  .turn-ring {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 5px var(--color-amber);
+    animation: turn-ring 1.4s ease-in-out infinite;
+  }
+
+  @keyframes turn-ring {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  /* Last 5 seconds: the phone's clock jumps once a second. */
+  .clock-tick {
+    animation: clock-tick 300ms var(--ease-out);
+  }
+
+  @keyframes clock-tick {
+    40% {
+      transform: scale(1.15);
+    }
+  }
+
+  /* The phone's timer bar, under the strip (REQ-UX-8). */
+  .phone-bar {
+    height: 6px;
+    margin-top: 6px;
+    border-radius: 3px;
+    background: var(--color-ink-dim);
+    transform-origin: 0 50%;
+    transition: transform 120ms linear;
+  }
+
+  .phone-bar[data-urgent] {
+    background: var(--color-amber);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .turn-ring,
+    .clock-tick {
+      animation: none;
+    }
+  }
+
+  [data-reduced] .turn-ring,
+  [data-reduced] .clock-tick {
+    animation: none;
+  }
 }

@@ -252,3 +252,161 @@
     animation: none;
   }
 }
+
+/* Clock and showpiece effects (04 §4.13, §4.14). */
+@layer components {
+  .timer-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--cell-h) * -0.11);
+    height: calc(var(--cell-h) * 0.07);
+    border-radius: 2px;
+    background: var(--color-ink-dim);
+    transform-origin: 0 50%;
+    transition: transform 120ms linear;
+  }
+
+  .timer-bar-urgent {
+    background: var(--color-amber);
+  }
+
+  .clock-pulse {
+    animation: clock-pulse 320ms var(--ease-out);
+  }
+
+  @keyframes clock-pulse {
+    40% {
+      transform: scale(1.06);
+    }
+  }
+
+  .fx-glint {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 4px var(--color-amber);
+    opacity: 0;
+  }
+
+  .fx-sweep {
+    position: absolute;
+    top: -10%;
+    bottom: -10%;
+    left: 0;
+    z-index: 12;
+    width: 30vw;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      rgb(242 242 238 / 0),
+      rgb(242 242 238 / 0.24),
+      rgb(242 242 238 / 0)
+    );
+  }
+
+  .fx-stamp {
+    position: absolute;
+    inset: 0;
+    z-index: 14;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+
+  .fx-stamp span {
+    border: calc(var(--cell-h) * 0.22) solid currentColor;
+    border-radius: calc(var(--cell-h) * 0.3);
+    padding: calc(var(--cell-h) * 0.1) calc(var(--cell-h) * 0.6);
+    background: rgb(22 24 27 / 0.92);
+    font-family: var(--font-flap);
+    font-size: calc(var(--cell-h) * 3.4);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    transform: rotate(-6deg);
+  }
+
+  .fx-stamp-amber span {
+    color: var(--color-amber);
+  }
+
+  .fx-stamp-red span {
+    color: var(--color-red);
+  }
+
+  .fx-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 13;
+    width: 40vmin;
+    height: 40vmin;
+    border-radius: 50%;
+    border: calc(var(--cell-h) * 0.18) solid currentColor;
+    pointer-events: none;
+  }
+
+  .fx-ring-amber {
+    color: var(--color-amber);
+  }
+
+  .fx-ring-red {
+    color: var(--color-red);
+  }
+
+  .fx-train {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    z-index: 14;
+    height: calc(var(--cell-h) * 2 + var(--cell-h) * 0.14);
+    transform: translateY(-50%);
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .fx-train span {
+    display: inline-flex;
+    gap: calc(var(--cell-h) * 0.16);
+    height: 100%;
+    white-space: nowrap;
+  }
+
+  .fx-train b {
+    display: grid;
+    width: calc(var(--cell-h) * 1.45);
+    place-items: center;
+    border-radius: 4px;
+    background: var(--color-amber);
+    color: var(--color-ticket-ink);
+    font-family: var(--font-flap);
+    font-size: calc(var(--cell-h) * 1.6);
+    font-weight: 700;
+  }
+
+  .searchlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 3;
+    height: var(--cell-h);
+    pointer-events: none;
+    background: rgb(242 242 238 / 0.12);
+    border-block: 1px solid rgb(242 242 238 / 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .clock-pulse {
+      animation: none;
+    }
+  }
+
+  .board[data-reduced] .clock-pulse {
+    animation: none;
+  }
+}

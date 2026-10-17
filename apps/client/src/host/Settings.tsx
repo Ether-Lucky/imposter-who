@@ -13,6 +13,12 @@ type Option<T> = { value: T; label: string };
 const secs = (values: number[]): Option<number>[] =>
   values.map((v) => ({ value: v, label: v === 0 ? 'OFF' : `${v} S` }));
 
+/** Steps for the laptop volume (REQ-AUD-1); 70 is the default. */
+const VOLUMES: Option<number>[] = [20, 40, 55, 70, 85, 100].map((v) => ({
+  value: v,
+  label: `${v}%`,
+}));
+
 const ONOFF: Option<boolean>[] = [
   { value: true, label: 'ON' },
   { value: false, label: 'OFF' },
@@ -162,6 +168,14 @@ export function Timetable({
             onChange={(v) => update({ [key]: v })}
           />
         ))}
+        {settings.hostSound && (
+          <Selector
+            label="Laptop volume"
+            options={VOLUMES}
+            value={settings.hostVolume}
+            onChange={(v) => update({ hostVolume: v })}
+          />
+        )}
         <p className="board-text">
           {settings.mode === 'manhunt'
             ? 'Manhunt: the imposter can never guess. Wrong votes knock a passenger out and cost a life; a new word each round until the imposter is caught or the lives run out.'

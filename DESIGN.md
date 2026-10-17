@@ -58,6 +58,27 @@ Every pair the screens use meets WCAG AA; red appears only as large text or as a
 - **Arrivals.** Roles flap in, scores walk up, and chad confetti bursts from both sides (civilians win) or from the imposter's row.
 - **Manhunt.** Lives sit in the header; out passengers sink below the others in red; the intermission names who was cancelled and offers NEXT DEPARTURE or END MATCH.
 
+## The clock
+
+Time is easy to follow from across the room (REQ-UX-8; `apps/client/src/host/clock.tsx`, `src/net/timer.ts`):
+
+- The board's top-right corner is a clock module two rows tall: `1:30` in double-height flaps.
+- A line under the headline drains right to left over the phase's set time.
+- In the last 10 seconds the clock and line turn amber and tick each second; in the last 5 the clock pulses and the board's frame glints amber at each tick. At zero a buzzer sounds and the board jolts. A paused timer reads `HOLD`.
+- Phones show the same time in big digits with their own draining bar; on your turn they buzz at 3, 2 and 1.
+
+## Showpiece effects
+
+Big moments get big, mechanical effects (REQ-UX-9; `apps/client/src/host/effects.ts`). Each is one or two elements animated with transform or opacity, and each has a calm version under reduced motion.
+
+- **Round start:** a band of light sweeps across the board and the board jolts as the cascade begins.
+- **Final call:** the station lights flicker twice.
+- **Vote reveal:** a searchlight sweeps the passenger rows, faster and faster, and stops on the accused.
+- **Verdict:** a giant DEPARTED (amber) or CANCELLED (red) stamp slams onto the board with a shockwave ring, a hard jolt, a low boom and a burst of chads. It plays on the screen after the reveal, the first moment the board may know who the imposter was.
+- **Civilians win:** five volleys of chads from around the board.
+- **Imposter wins:** the getaway, an amber train of flaps reading IMPOSTER ESCAPED, races across the board twice.
+- **Phones:** an amber ring pulses round the screen on your turn, and the ticket jolts when a verdict or result lands.
+
 ## The ticket (phone)
 
 `apps/client/src/play/`.
@@ -82,7 +103,7 @@ Every pair the screens use meets WCAG AA; red appears only as large text or as a
 
 All sound is synthesised in the browser (`apps/client/src/fx/synth.ts`): no files, nothing to license.
 
-- **Board:** a low station rumble at check-in, a two-note chime when someone checks in, the classic four-note chime at departure, a turn chime, a thunk when a clue lands, a falling three-note final call, a drum roll and a stamp per vote in the reveal, stingers for DEPARTED and CANCELLED, a fanfare for a win, and the flap clatter itself (at most 60 ticks a second, pitch-jittered). Sound starts after the first click on the board.
+- **Board:** a low station rumble at check-in, a clock tick in the last 10 seconds and a buzzer at zero, a boom under the verdict stamp, a whoosh for the getaway train, a two-note chime when someone checks in, the classic four-note chime at departure, a turn chime, a thunk when a clue lands, a falling three-note final call, a drum roll and a stamp per vote in the reveal, stingers for DEPARTED and CANCELLED, a fanfare for a win, and the flap clatter itself (at most 60 ticks a second, pitch-jittered). Sound starts after the first click on the board.
 - **Phones:** vibration on your turn, final call, tearing, punching a vote and the result, identical for every role. Each phone has a three-way button: vibration only (default), vibration and sound, or off.
 
 ## Not yet checked

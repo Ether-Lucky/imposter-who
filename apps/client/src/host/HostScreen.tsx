@@ -7,12 +7,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { HostView } from '@imposter-who/core';
 import { BoardGrid, BoardItem, useBoard } from '../flap/BoardGrid.tsx';
 import { FlapMotion, FlapRow, type FlapTone } from '../flap/Flap.tsx';
-import { formatClock } from '../net/clock.ts';
 import { useCountdown } from '../net/useCountdown.ts';
 import { OUTCOME_LABEL, nameOf } from '../ui/labels.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import { burstConfetti } from '../fx/confetti.ts';
 import { hostSfx } from './audio.ts';
+import { BigClock, CLOCK_COLS, TimerBar } from './clock.tsx';
+import { fireworks, flicker, getaway, shudder, sweep, verdictStamp } from './effects.ts';
 import { Lobby } from './Lobby.tsx';
 import { FIRST_ROW, FOOTER_ROW, Headline, MAX_ROWS, PassengerRows } from './rows.tsx';
 import {
@@ -40,29 +41,23 @@ function useAck(send: Send) {
   return { error, act };
 }
 
-function Clock({ view, offset }: { view: HostView; offset: number }) {
-  const timed = view.phase !== 'voteReveal' && view.phase !== 'result';
-  const seconds = useCountdown(timed ? view.deadline : null, view.pausedRemainingMs, offset);
-  if (seconds === null) return null;
-  const urgent = view.phase === 'discussion' ? seconds <= 15 : seconds <= 5;
-  return (
-    <BoardItem col={-1} row={0} w={5}>
-      <span aria-label="Time left">
-        <FlapRow text={formatClock(seconds)} width={5} tone={urgent ? 'amber' : 'ink'} />
-      </span>
-    </BoardItem>
-  );
-}
+/** Whether the clock module is up: rows 0 and 1 make room for it. */
+const hasClock = (view: HostView) =>
+  view.phase !== 'voteReveal' &&
+  view.phase !== 'result' &&
+  (view.deadline !== null || view.pausedRemainingMs !== null);
 
-/** Row 0: what this round is, plus the clock. */
+/** Row 0: what this round is; the big clock sits at the right of rows 0 and 1. */
 function Header({ view, offset, text }: { view: HostView; offset: number; text: string }) {
   const grid = useBoard();
+  const w = grid.cols - (hasClock(view) ? CLOCK_COLS + 1 : 0);
   return (
     <>
-      <BoardItem col={0} row={0} w={grid.cols - 7}>
-        <FlapRow text={fitWords(text, grid.cols - 7)} width={grid.cols - 7} />
+      <BoardItem col={0} row={0} w={w}>
+        <FlapRow text={fitWords(text, w)} width={w} />
       </BoardItem>
-      <Clock view={view} offset={offset} />
+      <BigClock view={view} offset={offset} />
+      <TimerBar view={view} offset={offset} />
     </>
   );
 }
@@ -332,7 +327,8 @@ function InRound({ view, offset, send }: HostScreenProps) {
     }
   }
 
-  let info = infoLine(view, grid.cols - 7);
+  const headW = grid.cols - (hasClock(view) ? CLOCK_COLS + 1 : 0);
+  let info = infoLine(view, headW);
   let head: { text: string; tone: FlapTone } = { text: headline(view), tone: 'amber' };
   if (view.phase === 'voteReveal' && reveal.beat?.announced && reveal.ballot) {
     head = {
@@ -362,7 +358,7 @@ function InRound({ view, offset, send }: HostScreenProps) {
     const parts = [`DESTINATION: ${(round.word?.word ?? '').toUpperCase()}`];
     if (round.guess)
       parts.push(`GUESS: ${round.guess.text.toUpperCase()} ${round.guess.correct ? 'OK' : 'X'}`);
-    info = fitWords(parts.join('  '), grid.cols - 7);
+    info = fitWords(parts.join('  '), headW);
   }
 
   const votesShown = reveal.beat?.votesShown ?? 0;
@@ -373,7 +369,7 @@ function InRound({ view, offset, send }: HostScreenProps) {
   const controls = controlsFor(view, act, reveal.skip);
   const room = grid.cols - signRunWidth(controls) - 2;
 
-  useConfetti(view, reduced);
+  useShowpieces(view, reduced);
 
   return (
     <>
@@ -381,6 +377,7 @@ function InRound({ view, offset, send }: HostScreenProps) {
       <Headline
         text={head.text}
         tone={head.tone}
+        w={headW}
         blink={view.phase === 'voting' ? `vote:${round.ballots.length}` : undefined}
       />
       {view.phase === 'clues' && round.lap > 1 && <LapSweep key={round.lap} />}
@@ -394,6 +391,14 @@ function InRound({ view, offset, send }: HostScreenProps) {
         }
         score={view.phase === 'result'}
       />
+      {view.phase === 'voteReveal' && reveal.beat && reveal.ballot && (
+        <Searchlight
+          rows={rows.length}
+          accused={rows.findIndex((r) => r.id === reveal.ballot!.ejectedId)}
+          sweeping={reveal.beat.tally && !reveal.beat.lifted && !reduced}
+          landed={reveal.beat.lifted}
+        />
+      )}
       {view.phase === 'voteReveal' && (
         <BoardItem col={0} row={FIRST_ROW} w={grid.cols} h={MAX_ROWS}>
           <button
@@ -464,31 +469,128 @@ function Paused({ view }: { view: HostView }) {
   );
 }
 
-/** Chad confetti on a win (04 §4.11). */
-function useConfetti(view: HostView, reduced: boolean) {
-  const outcome = view.phase === 'result' ? view.round?.outcome : null;
-  const key = outcome ? `${view.round!.number}:${outcome.reason}` : null;
-  const imposter = view.round?.imposterId ?? null;
+/**
+ * The searchlight (04 §4.14): during the tally a lit band sweeps the passenger rows,
+ * faster and faster, then rests on the accused as they lift.
+ */
+function Searchlight({
+  rows,
+  accused,
+  sweeping,
+  landed,
+}: {
+  rows: number;
+  accused: number;
+  sweeping: boolean;
+  landed: boolean;
+}) {
+  const grid = useBoard();
+  const ref = useRef<HTMLSpanElement>(null);
+  const pitch = grid.cellH + grid.gapY;
   useEffect(() => {
-    if (!key || reduced || !outcome || outcome.winner === 'none') return;
-    const id = setTimeout(() => {
-      if (outcome.winner === 'civilians') {
-        burstConfetti({ x: 0, y: innerHeight * 0.85, angle: -60, spread: 35, count: 90 });
-        burstConfetti({ x: innerWidth, y: innerHeight * 0.85, angle: -120, spread: 35, count: 90 });
-      } else {
-        const el = document.querySelector(`[data-row-id="${imposter}"] .board-item:nth-child(2)`);
-        const rect = el?.getBoundingClientRect();
-        burstConfetti({
-          x: rect ? rect.left + rect.width / 2 : innerWidth / 2,
-          y: rect ? rect.top : innerHeight / 2,
-          angle: -90,
-          spread: 25,
-          count: 120,
-        });
+    const el = ref.current;
+    if (!el || !sweeping || rows < 2) return;
+    const span = (rows - 1) * pitch;
+    const anim = el.animate(
+      [{ transform: 'translateY(0)' }, { transform: `translateY(${span}px)` }],
+      { duration: 700, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' },
+    );
+    let rate = 1;
+    const speed = setInterval(() => {
+      rate = Math.min(4, rate * 1.35);
+      anim.playbackRate = rate;
+    }, 250);
+    return () => {
+      clearInterval(speed);
+      anim.cancel();
+    };
+  }, [sweeping, rows, pitch]);
+  if (!sweeping && !(landed && accused >= 0)) return null;
+  return (
+    <BoardItem col={0} row={FIRST_ROW} w={grid.cols} h={MAX_ROWS} className="pointer-events-none">
+      <span
+        ref={ref}
+        className="searchlight"
+        style={
+          landed && accused >= 0 ? { transform: `translateY(${accused * pitch}px)` } : undefined
+        }
+      />
+    </BoardItem>
+  );
+}
+
+/**
+ * Showpiece effects as each phase arrives (04 §4.14): the departure sweep, the final-call
+ * flicker, the giant verdict stamp, fireworks or the getaway train. Each fires once per
+ * moment, keyed by round and ballot.
+ */
+function useShowpieces(view: HostView, reduced: boolean) {
+  const round = view.round;
+  const outcome = view.phase === 'result' ? round?.outcome : null;
+  const ballot = round?.ballots.at(-1);
+  const key = `${view.phase}:${round?.number}:${round?.ballots.length}:${outcome?.reason ?? ''}`;
+  const imposter = round?.imposterId ?? null;
+  const ejected = ballot?.result === 'eject' ? ballot.ejectedId : null;
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    const stamp = (text: string, tone: 'amber' | 'red') =>
+      later(250, () => {
+        verdictStamp(text, tone, { reduced });
+        hostSfx('boom');
+      });
+    switch (view.phase) {
+      case 'reveal':
+        sweep({ reduced });
+        later(150, () => shudder({ strength: 3, reduced }));
+        break;
+      case 'voting':
+        flicker({ reduced });
+        break;
+      case 'lastChance':
+        stamp('Departed', 'amber');
+        break;
+      case 'intermission':
+        if (ejected) stamp('Cancelled', 'red');
+        break;
+      case 'result': {
+        if (!outcome) break;
+        let delay = 600;
+        if (outcome.reason === 'civilianVotedOut') {
+          stamp('Cancelled', 'red');
+          delay = 2600;
+        } else if (outcome.reason === 'imposterCaught') {
+          stamp('Departed', 'amber');
+          delay = 2600;
+        }
+        if (outcome.winner === 'civilians') {
+          later(delay, () => fireworks({ reduced }));
+        } else if (outcome.winner === 'imposter') {
+          later(delay, () => {
+            getaway('Imposter escaped', { reduced });
+            hostSfx('whoosh');
+            const row = document.querySelector(
+              `[data-row-id="${imposter}"] .board-item:nth-child(2)`,
+            );
+            const r = row?.getBoundingClientRect();
+            if (r && !reduced) {
+              burstConfetti({
+                x: r.left + r.width / 2,
+                y: r.top,
+                angle: -90,
+                spread: 25,
+                count: 80,
+              });
+            }
+          });
+        }
+        break;
       }
-    }, 600);
-    return () => clearTimeout(id);
-  }, [key, reduced, outcome, imposter]);
+    }
+    return () => timers.forEach(clearTimeout);
+    // Each moment plays once, keyed by `key`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 }
 
 export function HostScreen({ view, offset, send }: HostScreenProps) {

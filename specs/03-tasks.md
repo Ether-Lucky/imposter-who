@@ -106,3 +106,11 @@ After M1 lands, these can run side by side in separate sessions because they tou
 - **M2 server** (`apps/server`)
 - **T4.1 to T4.3 flap engine + grid** (`apps/client/src/board`), which needs no server
 - **T6.1 sound sourcing** (`apps/client/public/audio`)
+
+## M9 · Clock and showpiece effects
+
+- [x] **T9.1** Big board clock (two rows), draining bar, last-10 s ticks, last-5 s pulse, time-up buzzer and shudder, PAUSE. *UX-8, 04 §4.13*
+- [x] **T9.2** Phone timer: big digits and a draining bar on the strip, last-3 s buzz on your turn. *UX-8*
+- [x] **T9.3** Board effects: departure sweep, shudder, final-call flicker, reveal searchlight, giant verdict stamp with shockwave and chads, fireworks, getaway train. *UX-9, 04 §4.14*
+- [x] **T9.4** Phone effects: verdict jolt, your-turn edge ring. *UX-9, 04 §4.14*
+- [x] **T9.5** Host volume control in the timetable. *AUD-1*

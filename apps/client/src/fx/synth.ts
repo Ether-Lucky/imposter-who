@@ -156,6 +156,27 @@ export const sfx = {
     tone(NOTE(60), now() + 0.45, 0.9, { type: 'triangle', gain: 0.14, glideTo: NOTE(52) });
   },
   fanfare: () => chord([72, 76, 79, 84, 88], now(), 0.11, 0.9, 0.1, 'triangle'),
+  /** A station clock's tick for each of the last 10 seconds. */
+  tick: () => {
+    hiss(now(), 0.025, { freq: 2400, q: 6, gain: 0.22 });
+    tone(1250, now(), 0.04, { type: 'square', gain: 0.03 });
+  },
+  /** Time up. */
+  buzzer: () => {
+    tone(147, now(), 0.55, { type: 'sawtooth', gain: 0.09 });
+    tone(155, now(), 0.55, { type: 'sawtooth', gain: 0.09 });
+  },
+  /** The giant verdict stamp landing. */
+  boom: () => {
+    tone(90, now(), 0.5, { gain: 0.35, glideTo: 40 });
+    hiss(now(), 0.25, { filter: 'lowpass', freq: 400, gain: 0.35 });
+  },
+  /** The getaway train rushing past. */
+  whoosh: () => {
+    const at = now();
+    hiss(at, 1.4, { filter: 'bandpass', freq: 900, q: 0.7, gain: 0.18 });
+    chord([76, 72], at + 0.1, 0.25, 0.6, 0.06, 'square');
+  },
   // phone (opt-in)
   tear: () => {
     const at = now();
