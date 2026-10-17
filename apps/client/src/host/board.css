@@ -245,7 +245,10 @@
     transform: none;
   }
 
-  .board[data-reduced] :is(.sign-amber:enabled::after, .lap-sweep, .headline-blink) {
+  /* Kept apart: a pseudo-element inside :is() would void the whole rule. */
+  .board[data-reduced] .sign-amber:enabled::after,
+  .board[data-reduced] .lap-sweep,
+  .board[data-reduced] .headline-blink {
     animation: none;
   }
 }
